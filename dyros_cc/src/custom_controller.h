@@ -127,6 +127,7 @@ private:
     Eigen::Vector3d Foot_init;
     Eigen::Vector3d Foot_init2;
     Eigen::Vector3d COM_Target;
+    Eigen::Vector3d cur_Foot2Pel;
     double step_cnt;
 
     //control gains
@@ -134,6 +135,8 @@ private:
     Eigen::VectorQd Kd;
     Eigen::Vector3d Kp_com;
     Eigen::Vector3d Kd_com;
+    Eigen::Vector3d Kp_com_rot;
+    Eigen::Vector3d Kd_com_rot;
     Eigen::Vector3d Kp_ub;
     Eigen::Vector3d Kd_ub;
     Eigen::Vector3d Kp_hand;
@@ -155,6 +158,8 @@ private:
     bool prefoot = true; // true : left contact - false : right contact
     int state;
     int prestate;
+    double presupport;// 1 = left 0 = right
+    double cursupport;
     int task_state_n;
     int task_number;
     double task_time1;
