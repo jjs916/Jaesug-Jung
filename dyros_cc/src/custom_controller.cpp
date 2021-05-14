@@ -1,6 +1,6 @@
 #include "custom_controller.h"
 #define PI 3.141592653589793238462643
-#define controltype 2 //1:original 2:mosf
+#define controltype 1 //1:original 2:mosf
 
 CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), rd_(rd), wbc_(dc.wbc_), wkc_(dc.wkc_)
 {
@@ -33,16 +33,16 @@ CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), 
         // Kp_foot_rot(i) = 2500.0;
         // Kd_foot_rot(i) = 60.0;
         if(controltype == 1){
-            Kp_com(i) = 100.0;
-            Kd_com(i) = 10.0;
-            Kp_com_rot(i) = 100.0;
-            Kd_com_rot(i) = 100.0;
+            Kp_com(i) = 60.0;
+            Kd_com(i) = 5.0;
+            Kp_com_rot(i) = 800.0;
+            Kd_com_rot(i) = 10.0;
             Kp_ub(i) = 100.0;
             Kd_ub(i) = 10.0;
-            Kp_hand(i) = 100.0;
-            Kd_hand(i) = 5.0;
-            Kp_hand_rot(i) = 100.0;
-            Kd_hand_rot(i) = 5.0;
+            Kp_hand(i) = 10.0;
+            Kd_hand(i) = 1.0;
+            Kp_hand_rot(i) = 10.0;
+            Kd_hand_rot(i) = 1.0;
             Kp_foot(i) = 100.0;
             Kd_foot(i) = 5.0;
             Kp_foot_rot(i) = 100.0;
@@ -50,14 +50,14 @@ CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), 
         }
         else if (controltype == 2)
         {
-            Kp_com(i) = 1600.0;
-            Kd_com(i) = 40.0;
-            Kp_com_rot(i) = 900.0;
-            Kd_com_rot(i) = 60.0;
-            Kp_ub(i) = 100.0;
+            Kp_com(i) = 700.0;
+            Kd_com(i) = 6.0;//40 60 100
+            Kp_com_rot(i) = 100.0;
+            Kd_com_rot(i) = 1.0;
+            Kp_ub(i) = 50.0;
             Kd_ub(i) = 1.0;
-            Kp_hand(i) = 400.0;
-            Kd_hand(i) = 40.0;
+            Kp_hand(i) = 100.0;
+            Kd_hand(i) = 5.0;
             Kp_hand_rot(i) = 100.0;
             Kd_hand_rot(i) = 5.0;
             Kp_foot(i) = 400.0;
@@ -190,8 +190,11 @@ void CustomController::computeSlow()
                 COM_init = rd_.link_[Pelvis].xpos;// - rd_.link_[Right_Foot].xpos;
 
                 rd_.link_[Pelvis].x_desired = COM_init;//rd_.link_[Pelvis].xpos - rd_.link_[Right_Foot].xpos;//rd_.link_[Right_Foot].xpos;
-                rd_.link_[Pelvis].x_desired(2) = rd_.link_[Pelvis].xpos(2) + tc.l_x;// - rd_.link_[Right_Foot].xpos(2) + tc.l_x;
-                rd_.link_[Pelvis].rot_desired = Matrix3d::Identity();
+                rd_.link_[Pelvis].x_desired(0) = rd_.link_[Pelvis].xpos(0) + tc.l_x;
+				rd_.link_[Pelvis].x_desired(1) = rd_.link_[Pelvis].xpos(1) + tc.l_y;
+				rd_.link_[Pelvis].x_desired(2) = rd_.link_[Pelvis].xpos(2) + tc.l_z;
+                //rd_.link_[Pelvis].rot_desired = Matrix3d::Identity();
+				rd_.link_[Pelvis].rot_desired = DyrosMath::rotateWithX(tc.roll * 3.1415 / 180.0);
                 RH_x_init_local = rd_.link_[Right_Hand].xpos - rd_.link_[Upper_Body].xpos;//rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Right_Hand].xpos - rd_.link_[Upper_Body].xpos);
                 LH_x_init_local = rd_.link_[Left_Hand].xpos - rd_.link_[Upper_Body].xpos;//rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Left_Hand].xpos - rd_.link_[Upper_Body].xpos);
                 RH_R_init_local = rd_.link_[Upper_Body].rot_init.transpose() * rd_.link_[Right_Hand].rot_init;
@@ -229,12 +232,6 @@ void CustomController::computeSlow()
 
                 rd_.link_[Left_Hand].x_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(0);
                 rd_.link_[Left_Hand].v_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(1);
-
-                // rd_.link_[Right_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(0);
-                // rd_.link_[Right_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(1);
-
-                // rd_.link_[Left_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(0);
-                // rd_.link_[Left_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(1);
             }
 
             //rd_.link_[Right_Hand].x_traj = rd_.link_[Upper_Body].xpos + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].x_traj_local;
@@ -247,11 +244,22 @@ void CustomController::computeSlow()
             rd_.link_[Left_Hand].r_traj = rd_.link_[Upper_Body].rot_init * LH_R_init_local * rd_.link_[Left_Hand].r_traj_local;
             rd_.link_[Left_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Left_Hand].w_traj_local;
 
-            rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, Pelvis, Kp_com, Kd_com, 0.3 * Kp_com, 0.3 * Kd_com);
-            // for (int i = 0; i < 3; i++){
-            //     rd_.f_star(i) = Kp_com(i) * (rd_.link_[Pelvis].x_traj(i) - (rd_.link_[Pelvis].xpos(i) - rd_.link_[Right_Foot].xpos(i))) + Kd_com(i) * (rd_.link_[Pelvis].v_traj(i) - (rd_.link_[Pelvis].v(i) - rd_.link_[Right_Foot].v(i)));
+            rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, Pelvis, Kp_com, Kd_com, Kp_com_rot, Kd_com_rot);
+            // if(controltype == 2){
+            //   rd_.f_star(0) = Kp_com(0) * (rd_.link_[Pelvis].x_traj(0) - rd_.link_[Pelvis].xpos(0)) + Kd_com(0) * (rd_.link_[Pelvis].v_traj(0) - rd_.link_[Pelvis].v(0));
+            //   //rd_.f_star(0) = 800.0 * (rd_.link_[Pelvis].x_traj(0) - rd_.link_[Pelvis].xpos(0)) + 30.0 * (rd_.link_[Pelvis].v_traj(0) - rd_.link_[Pelvis].v(0));
+            //   rd_.f_star(1) = 900.0 * (rd_.link_[Pelvis].x_traj(1) - rd_.link_[Pelvis].xpos(1)) + 10.0 * (rd_.link_[Pelvis].v_traj(1) - rd_.link_[Pelvis].v(1));
+            //   rd_.f_star(2) = 3000.0 * (rd_.link_[Pelvis].x_traj(2) - rd_.link_[Pelvis].xpos(2)) + 40.0 * (rd_.link_[Pelvis].v_traj(2) - rd_.link_[Pelvis].v(2));
+            //   //rd_.f_star(2) = Kp_com(2) * (rd_.link_[Pelvis].x_traj(2) - rd_.link_[Pelvis].xpos(2)) + Kd_com(2) * (rd_.link_[Pelvis].v_traj(2) - rd_.link_[Pelvis].v(2));
             // }
-            // rd_.f_star.segment(3, 3) = wbc_.getfstar_rot(rd_, Pelvis, Kp_com_rot, Kd_com_rot);
+            // else if(controltype == 1){
+            //   rd_.f_star(0) = Kp_com(0) * (rd_.link_[Pelvis].x_traj(0) - rd_.link_[Pelvis].xpos(0)) + Kd_com(0) * (rd_.link_[Pelvis].v_traj(0) - rd_.link_[Pelvis].v(0));
+            //   rd_.f_star(1) = 100.0 * (rd_.link_[Pelvis].x_traj(1) - rd_.link_[Pelvis].xpos(1)) + 10.0 * (rd_.link_[Pelvis].v_traj(1) - rd_.link_[Pelvis].v(1));
+            //   rd_.f_star(2) = 300.0 * (rd_.link_[Pelvis].x_traj(2) - rd_.link_[Pelvis].xpos(2)) + 10.0 * (rd_.link_[Pelvis].v_traj(2) - rd_.link_[Pelvis].v(2));
+            //   //rd_.f_star(2) = Kp_com(2) * (rd_.link_[Pelvis].x_traj(2) - rd_.link_[Pelvis].xpos(2)) + Kd_com(2) * (rd_.link_[Pelvis].v_traj(2) - rd_.link_[Pelvis].v(2));
+            //   //rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, Pelvis, Kp_com, Kd_com, 0.3 * Kp_com, 0.3 * Kd_com);
+            // }            
+            //rd_.f_star.segment(3, 3) = wbc_.getfstar_rot(rd_, Pelvis, Kp_com_rot, Kd_com_rot);
             rd_.f_star.segment(6, 3) = wbc_.getfstar_rot(rd_, Upper_Body, Kp_ub, Kd_ub);
             //rd_.f_star.segment(9, 6) = wbc_.getfstar6d(rd_, Right_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
             for (int i = 0; i < 3; i++){
@@ -291,13 +299,19 @@ void CustomController::computeSlow()
         q_ext_est_pre = q_ext_est;
         q_ext_dot_est_pre = q_ext_dot_est;
 
+		pel_ori_desired = rd_.link_[Pelvis].r_traj.eulerAngles(0, 1, 2);
+        pel_ori = rd_.link_[Pelvis].Rotm.eulerAngles(0, 1, 2);
+
         file[3] << rd_.control_time_
                 << "\t" << rd_.link_[Pelvis].x_traj(0) << "\t" << rd_.link_[Pelvis].x_traj(1) << "\t" << rd_.link_[Pelvis].x_traj(2)
-                << "\t" << rd_.link_[Pelvis].xpos(0)-rd_.link_[Right_Foot].xpos(0) << "\t" << rd_.link_[Pelvis].xpos(1)-rd_.link_[Right_Foot].xpos(1) << "\t" << rd_.link_[Pelvis].xpos(2)-rd_.link_[Right_Foot].xpos(2)
-                << "\t" << rd_.link_[Pelvis].v_traj(0) << "\t" << rd_.link_[Pelvis].v_traj(1) << "\t" << rd_.link_[Pelvis].v_traj(2)
-                << "\t" << rd_.link_[Pelvis].v(0)-rd_.link_[Right_Foot].v(0) << "\t" << rd_.link_[Pelvis].v(1)-rd_.link_[Right_Foot].v(1) << "\t" << rd_.link_[Pelvis].v(2)-rd_.link_[Right_Foot].v(0)
-                << "\t" << total_torque(3)
+                << "\t" << rd_.link_[Pelvis].xpos(0) << "\t" << rd_.link_[Pelvis].xpos(1) << "\t" << rd_.link_[Pelvis].xpos(2)
+                // << "\t" << rd_.link_[Pelvis].v_traj(0) << "\t" << rd_.link_[Pelvis].v_traj(1) << "\t" << rd_.link_[Pelvis].v_traj(2)
+                // << "\t" << rd_.link_[Pelvis].v(0) << "\t" << rd_.link_[Pelvis].v(1) << "\t" << rd_.link_[Pelvis].v(2)
+				<< "\t" << pel_ori_desired(0) << "\t" << pel_ori_desired(1) << "\t" << pel_ori_desired(2)
+                << "\t" << pel_ori(0) << "\t" << pel_ori(1) << "\t" << pel_ori(2)
                 << endl;
+        // file[2] << rd_.control_time_
+        //         << "\t" << rd_.ContactForce_FT_raw(0) << "\t" << rd_.ContactForce_FT_raw(1) << "\t" << rd_.ContactForce_FT_raw(2)
     }
     else if (tc.mode == 11)
     { //before single
@@ -320,7 +334,25 @@ void CustomController::computeSlow()
                 task_number = 9 + 12;
                 task_time1 = 10.0;
 
-                rd_.J_task.setZero(task_number, MODEL_DOF_VIRTUAL);
+				for (int i = 0; i < 3; ++i)
+				{
+					Kp_com(i) = 4000.0;
+					Kd_com(i) = 40.0; //40 60 100
+					Kp_com_rot(i) = 50.0;
+					Kd_com_rot(i) = 1.0;
+					Kp_ub(i) = 50.0;
+					Kd_ub(i) = 1.0;
+					Kp_hand(i) = 0.0;	  //400.0;
+					Kd_hand(i) = 0.0;	  //40.0;
+					Kp_hand_rot(i) = 0.0; //100.0;
+					Kd_hand_rot(i) = 0.0; //5.0;
+					Kp_foot(i) = 400.0;
+					Kd_foot(i) = 40.0;
+					Kp_foot_rot(i) = 100.0;
+					Kd_foot_rot(i) = 5.0;
+				}
+
+				rd_.J_task.setZero(task_number, MODEL_DOF_VIRTUAL);
                 rd_.f_star.setZero(task_number);
                 rd_.J_task.block(0, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Pelvis].Jac;
                 rd_.J_task.block(6, 0, 3, MODEL_DOF_VIRTUAL) = rd_.link_[Upper_Body].Jac_COM_r;
@@ -378,13 +410,11 @@ void CustomController::computeSlow()
             rd_.link_[Left_Hand].r_traj = rd_.link_[Upper_Body].rot_init * LH_R_init_local * rd_.link_[Left_Hand].r_traj_local;
             rd_.link_[Left_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Left_Hand].w_traj_local;
 
-            rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, Pelvis, Kp_com, Kd_com, 0.3 * Kp_com, 0.3 * Kd_com);
+            rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, Pelvis, Kp_com, Kd_com, Kp_com_rot, Kd_com_rot);
             rd_.f_star.segment(6, 3) = wbc_.getfstar_rot(rd_, Upper_Body, Kp_ub, Kd_ub);
             rd_.f_star.segment(9, 6) = wbc_.getfstar6d(rd_, Right_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
             rd_.f_star.segment(15, 6) = wbc_.getfstar6d(rd_, Left_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
 
-            //task_torque = wbc_.task_control_torque_motor(rd_, rd_.J_task, rd_.f_star);
-            //task_torque = wbc_.task_control_torque_original(rd_, rd_.J_task, rd_.f_star);
             gravity_torque = wbc_.gravity_compensation_torque(rd_, false, false);
 
             if (rd_.control_time_ >= tc.command_time + task_time1 - 0.01)//only for going to SSP
@@ -395,29 +425,11 @@ void CustomController::computeSlow()
             {
                 fc_ratio = 1.0;
             }
-            //fc_ratio = 1.0;
 
-            if (controltype == 1)
-            {
-                task_torque = wbc_.task_control_torque_with_gravity(rd_, rd_.J_task, rd_.f_star, false);
-                //task_torque.setZero();
-                Contact_torque = wbc_.contact_force_redistribution_torque_walking(rd_, task_torque, contact_force_re, eta_data, fc_ratio, 0);
-                //Contact_torque.setZero();
-                total_torque = gravity_torque + task_torque + Contact_torque;
-                ControlVal_ = gravity_torque + task_torque + Contact_torque;
-            }
-            else if (controltype == 2)
-            {
                 task_torque = wbc_.task_control_torque_motor(rd_, rd_.J_task, rd_.f_star);
-                //task_torque.setZero();
                 Contact_torque = wbc_.contact_force_redistribution_torque_walking(rd_, task_torque + gravity_torque, contact_force_re, eta_data, fc_ratio, 0);
                 total_torque = gravity_torque + task_torque + Contact_torque;
                 ControlVal_ = gravity_torque + task_torque + Contact_torque;
-            }
-
-            //Contact_torque = wbc_.contact_force_redistribution_torque_walking(rd_, task_torque + gravity_torque, contact_force_re, eta_data, fc_ratio, 0);
-
-            //ControlVal_ = gravity_torque + task_torque + Contact_torque;
         }
         q_dot_pre = rd_.q_dot_;
         q_ext_est_pre = q_ext_est;
@@ -426,16 +438,7 @@ void CustomController::computeSlow()
         file[3] << rd_.control_time_
                 << "\t" << rd_.link_[Pelvis].x_traj(0) << "\t" << rd_.link_[Pelvis].x_traj(1) << "\t" << rd_.link_[Pelvis].x_traj(2)
                 << "\t" << rd_.link_[Pelvis].xpos(0) << "\t" << rd_.link_[Pelvis].xpos(1) << "\t" << rd_.link_[Pelvis].xpos(2)
-                // << "\t" << rd_.link_[Left_Foot].x_traj(0) << "\t" << rd_.link_[Left_Foot].x_traj(1) << "\t" << rd_.link_[Left_Foot].x_traj(2)
-                // << "\t" << rd_.link_[Left_Foot].xpos(0) << "\t" << rd_.link_[Left_Foot].xpos(1) << "\t" << rd_.link_[Left_Foot].xpos(2)
-                // << "\t" << total_torque(11)
-                // << "\t" << rd_.link_[COM_id].v_traj(0) << "\t" << rd_.link_[COM_id].v_traj(1) << "\t" << rd_.link_[COM_id].v_traj(2)
-                // << "\t" << rd_.link_[COM_id].v(0) << "\t" << rd_.link_[COM_id].v(1) << "\t" << rd_.link_[COM_id].v(2)
                 << endl;
-        // file[2] << total_torque(5) << "\t" << total_torque(11) << "\t" << task_torque(5)
-        //         << "\t" << task_torque(11) << "\t" << Contact_torque(5) << "\t" << Contact_torque(11)
-        //         << "\t" << gravity_torque(5) << "\Pelvist" << gravity_torque(11)
-        //         << endl;
     }
     else if (tc.mode == 12)
     { //after single
@@ -463,13 +466,14 @@ void CustomController::computeSlow()
                 rd_.link_[Left_Hand].Set_initpos();
 
                 rd_.link_[Pelvis].x_desired = rd_.link_[Pelvis].xpos;
-                //rd_.link_[COM_id].x_desired(1) = rd_.link_[COM_id].xpos(1) - 0.06;
-                rd_.link_[Pelvis].x_desired(2) = rd_.link_[COM_id].xpos(2)  + tc.l_x;//- 0.2;
+				rd_.link_[Pelvis].x_desired(0) = rd_.link_[Pelvis].xpos(0)  + tc.l_x;//- 0.2;
+				rd_.link_[Pelvis].x_desired(1) = rd_.link_[Pelvis].xpos(1)  + tc.l_y;//- 0.2;
+                rd_.link_[Pelvis].x_desired(2) = rd_.link_[Pelvis].xpos(2)  + tc.l_z;//- 0.2;
                 rd_.link_[Pelvis].rot_desired = Matrix3d::Identity();
+				rd_.link_[Pelvis].rot_desired = DyrosMath::rotateWithX(tc.roll * 3.1415 / 180.0);
 
                 rd_.link_[Left_Foot].x_desired = rd_.link_[Left_Foot].xpos;
-                // rd_.link_[Left_Foot].x_desired(1) = rd_.link_[Left_Foot].xpos(1) - 0.03;
-                rd_.link_[Left_Foot].x_desired(2) = rd_.link_[Left_Foot].xpos(2);
+                //rd_.link_[Left_Foot].x_desired(2) = rd_.link_[Left_Foot].xpos(2);
                 rd_.link_[Left_Foot].rot_desired = Matrix3d::Identity();
 
                 RH_x_init_local = rd_.link_[Upper_Body].Rotm.transpose() * (rd_.link_[Right_Hand].xpos - rd_.link_[Upper_Body].xpos);
