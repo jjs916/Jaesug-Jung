@@ -1,6 +1,6 @@
 #include "custom_controller.h"
 #define PI 3.141592653589793238462643
-#define controltype 2 //1:original 2:mosf
+#define controltype 1 //1:original 2:mosf
 
 CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), rd_(rd), wbc_(dc.wbc_), wkc_(dc.wkc_)
 {
@@ -33,8 +33,8 @@ CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), 
         // Kp_foot_rot(i) = 2500.0;
         // Kd_foot_rot(i) = 60.0;
         if(controltype == 1){
-            Kp_com(i) = 10.0;//60.0;
-            Kd_com(i) = 1.0;//5.0;
+            Kp_com(i) = 60.0;//60.0;
+            Kd_com(i) = 5.0;//5.0;
             Kp_com_rot(i) = 100.0;
             Kd_com_rot(i) = 10.0;
             Kp_ub(i) = 100.0;
@@ -50,8 +50,8 @@ CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), 
         }
         else if (controltype == 2)
         {
-            Kp_com(i) = 700.0;
-            Kd_com(i) = 6.0;//40 60 100
+            Kp_com(i) = 130.0;
+            Kd_com(i) = 10.0;//40 60 100
             Kp_com_rot(i) = 100.0;
             Kd_com_rot(i) = 1.0;
             Kp_ub(i) = 50.0;
@@ -293,16 +293,24 @@ void CustomController::computeSlow()
 		pel_ori_desired = rd_.link_[Pelvis].r_traj.eulerAngles(0, 1, 2);
         pel_ori = rd_.link_[Pelvis].Rotm.eulerAngles(0, 1, 2);
 
-        file[3] << rd_.control_time_
-                << "\t" << rd_.link_[Pelvis].x_traj(0) << "\t" << rd_.link_[Pelvis].x_traj(1) << "\t" << rd_.link_[Pelvis].x_traj(2)
-                << "\t" << rd_.link_[Pelvis].xpos(0) << "\t" << rd_.link_[Pelvis].xpos(1) << "\t" << rd_.link_[Pelvis].xpos(2)
-                // << "\t" << rd_.link_[Pelvis].v_traj(0) << "\t" << rd_.link_[Pelvis].v_traj(1) << "\t" << rd_.link_[Pelvis].v_traj(2)
-                // << "\t" << rd_.link_[Pelvis].v(0) << "\t" << rd_.link_[Pelvis].v(1) << "\t" << rd_.link_[Pelvis].v(2)
-				<< "\t" << pel_ori_desired(0) << "\t" << pel_ori_desired(1) << "\t" << pel_ori_desired(2)
-                << "\t" << pel_ori(0) << "\t" << pel_ori(1) << "\t" << pel_ori(2)
-                << endl;
-        // file[2] << rd_.control_time_
-        //         << "\t" << rd_.ContactForce_FT_raw(0) << "\t" << rd_.ContactForce_FT_raw(1) << "\t" << rd_.ContactForce_FT_raw(2)
+        // file[3] << rd_.control_time_
+        //         << "\t" << rd_.link_[Pelvis].x_traj(0) << "\t" << rd_.link_[Pelvis].x_traj(1) << "\t" << rd_.link_[Pelvis].x_traj(2)
+        //         << "\t" << rd_.link_[Pelvis].xpos(0) - rd_.link_[Right_Foot].xpos(0) << "\t" << rd_.link_[Pelvis].xpos(1) - rd_.link_[Right_Foot].xpos(1) << "\t" << rd_.link_[Pelvis].xpos(2) - rd_.link_[Right_Foot].xpos(2)
+        //         // << "\t" << rd_.link_[Pelvis].v_traj(0) << "\t" << rd_.link_[Pelvis].v_traj(1) << "\t" << rd_.link_[Pelvis].v_traj(2)
+        //         // << "\t" << rd_.link_[Pelvis].v(0) << "\t" << rd_.link_[Pelvis].v(1) << "\t" << rd_.link_[Pelvis].v(2)
+		// 		<< "\t" << pel_ori_desired(0) << "\t" << pel_ori_desired(1) << "\t" << pel_ori_desired(2)
+        //         << "\t" << pel_ori(0) << "\t" << pel_ori(1) << "\t" << pel_ori(2)
+        //         << endl;
+        file[2] << rd_.control_time_
+                << "\t" << total_torque(0) << "\t" << total_torque(1) << "\t" << total_torque(2)
+				<< "\t" << total_torque(3) << "\t" << total_torque(4) << "\t" << total_torque(5)
+				<< "\t" << total_torque(6) << "\t" << total_torque(7) << "\t" << total_torque(8)
+				<< "\t" << total_torque(9) << "\t" << total_torque(10) << "\t" << total_torque(11)
+				<< "\t" << dc_.torque_elmo_(0) << "\t" << dc_.torque_elmo_(1) << "\t" << dc_.torque_elmo_(2) 
+				<< "\t" << dc_.torque_elmo_(3) << "\t" << dc_.torque_elmo_(4) << "\t" << dc_.torque_elmo_(5) 
+				<< "\t" << dc_.torque_elmo_(6) << "\t" << dc_.torque_elmo_(7) << "\t" << dc_.torque_elmo_(8) 
+				<< "\t" << dc_.torque_elmo_(9) << "\t" << dc_.torque_elmo_(10) << "\t" << dc_.torque_elmo_(11) 
+				<< endl;
     }
     else if (tc.mode == 11)
     { //before single
