@@ -5049,6 +5049,7 @@ VectorQd WholebodyController::task_control_torque_with_gravity(RobotData &Robot,
     Robot.lambda_inv = J_task * Robot.A_matrix_inverse * Robot.N_C * J_task.transpose();
 
     Robot.lambda = Robot.lambda_inv.inverse();
+    
     Robot.J_task_inv_T = Robot.lambda * J_task * Robot.A_matrix_inverse * Robot.N_C;
     Robot.Q = Robot.J_task_inv_T * Robot.Slc_k_T;
     Robot.Q_T_ = Robot.Q.transpose();
@@ -5092,6 +5093,62 @@ VectorQd WholebodyController::task_control_torque_motor(RobotData &Robot, Eigen:
     VectorQd torque_task;
     torque_task = Robot.W_inv * Robot.Q_motor_T_ * Robot.Q_motor_temp_inv * Robot.lambda_motor * f_star_;
 
+    return torque_task;
+}
+
+VectorQd WholebodyController::task_control_torque_extra(RobotData &Robot, Eigen::MatrixXd J_task, Eigen::VectorXd f_star_)
+{
+    Robot.task_dof = J_task.rows();
+
+    //Task Control Torque;
+    Robot.J_task = J_task;
+    Robot.J_task_T.resize(MODEL_DOF + 6, Robot.task_dof);
+    Robot.J_task_T.setZero();
+
+    Eigen::MatrixXd Si;
+    Eigen::MatrixXd SiT;
+    Eigen::MatrixXd SikT;
+
+    Si.setZero(2, MODEL_DOF + 6);
+    SiT.setZero(MODEL_DOF + 6, 2);
+    SikT.setZero(MODEL_DOF, 2);
+    Si(0,9)=1.0;
+    Si(0,15)=1.0;
+    SiT = Si.transpose();
+    SikT(3,0)=1.0;
+    SikT(9,0)=1.0;
+
+    Robot.J_task_T = J_task.transpose();
+
+    Robot.lambda_motor_inv = J_task * Robot.Motor_inertia_inverse * (Robot.I37 - Robot.J_C.transpose() * Robot.J_C_INV_T) * Robot.J_task_T;
+
+    Robot.lambda_motor = Robot.lambda_motor_inv.inverse();
+    Robot.J_task_inv_motor_T = Robot.lambda_motor * J_task * Robot.Motor_inertia_inverse * (Robot.I37 - Robot.J_C.transpose() * Robot.J_C_INV_T);
+
+    Eigen::MatrixXd Qi;
+    Eigen::MatrixXd QiT;
+    Eigen::MatrixXd Qi_tmp;
+    Eigen::MatrixXd Qi_tmp_inv;
+
+    Qi = Robot.J_task_inv_motor_T * SiT;
+    QiT = Qi.transpose();
+
+    Eigen::MatrixXd Wi;
+    Eigen::MatrixXd Wi_inv;
+
+    //Wi.setZero(2,2);
+    //Wi_inv.setZero(2,2);
+
+    Wi = Si * Robot.A_matrix_inverse * Robot.N_C * SiT; //2 types for w matrix
+    Wi_inv = DyrosMath::pinv_QR(Wi);
+
+    Qi_tmp = Qi * Wi_inv * QiT;
+
+    Qi_tmp_inv = DyrosMath::pinv_QR(Qi_tmp);
+
+    VectorQd torque_task;
+    torque_task = SikT * Wi_inv * QiT * Qi_tmp_inv * Robot.lambda_motor * f_star_;
+//cout << torque_task << endl << endl;
     return torque_task;
 }
 /*
