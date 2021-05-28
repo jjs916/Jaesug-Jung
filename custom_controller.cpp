@@ -1,6 +1,6 @@
 #include "custom_controller.h"
 #define PI 3.141592653589793238462643
-#define controltype 1 //1:original 2:mosf
+#define controltype 1 //1:original 2:mosf 3:ik
 
 CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), rd_(rd), wbc_(dc.wbc_), wkc_(dc.wkc_)
 {
@@ -33,7 +33,7 @@ CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), 
         // Kp_foot_rot(i) = 2500.0;
         // Kd_foot_rot(i) = 60.0;
         if(controltype == 1){
-            Kp_com(i) = 55.0;//60.0;
+            Kp_com(i) = 10.0;//60.0;
             Kd_com(i) = 5.0;//5.0;
             Kp_com_rot(i) = 100.0;
             Kd_com_rot(i) = 10.0;
@@ -50,8 +50,8 @@ CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), 
         }
         else if (controltype == 2)
         {
-            Kp_com(i) = 150.0;
-            Kd_com(i) = 10.0;//40 60 100
+            Kp_com(i) = 700.0;
+            Kd_com(i) = 6.0;//40 60 100
             Kp_com_rot(i) = 100.0;
             Kd_com_rot(i) = 1.0;
             Kp_ub(i) = 50.0;
@@ -67,19 +67,33 @@ CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), 
         }
     }
 
-    Kp << 400.0, 400.0, 400.0, 400.0, 400.0, 400.0,           //left foot
-        400.0, 400.0, 400.0, 400.0, 400.0, 400.0,             //right foot
-        400.0, 400.0, 400.0,                                  //waist
-        200.0, 200.0, 200.0, 200.0, 200.0, 200.0, 10.0, 10.0, //left hand
-        10.0, 10.0,                                           //neck
-        200.0, 200.0, 200.0, 200.0, 200.0, 200.0, 10.0, 10.0; //right hand
+    Kp << 1800.0, 2100.0, 2100.0, 2100.0, 1800.0, 1800.0,           //left foot
+        1800.0, 2100.0, 2100.0, 2100.0, 1800.0, 1800.0,             //right foot
+        2200.0, 2200.0, 2200.0,                                  //waist
+        400.0, 800.0, 400.0, 400.0, 250.0, 250.0, 50.0, 50.0, //left hand
+        50.0, 50.0,                                           //neck
+        400.0, 800.0, 400.0, 400.0, 250.0, 250.0, 50.0, 50.0; //right hand
 
-    Kd << 15.0, 24.0, 15.0, 25.0, 24.0, 24.0,
-        15.0, 24.0, 15.0, 25.0, 24.0, 24.0,
-        15.0, 24.0, 15.0,
-        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 1.0, 1.0,
-        1.0, 1.0,
-        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 1.0, 1.0;
+    Kd << 70.0, 90.0, 90.0, 90.0, 80.0, 80.0,
+        70.0, 90.0, 90.0, 90.0, 80.0, 80.0,
+        90.0, 90.0, 1590.0,
+        10.0, 10.0, 10.0, 10.0, 2.5, 2.0, 2.0, 2.0,
+        2.0, 2.0,
+        10.0, 10.0, 10.0, 10.0, 2.5, 2.0, 2.0, 2.0;
+    /////real gain
+    // Kp << 2000.0, 5000.0, 4000.0, 3700.0, 5000.0, 5000.0,           //left foot
+    //     2000.0, 5000.0, 4000.0, 3700.0, 5000.0, 5000.0,             //right foot
+    //     6000.0, 10000.0, 10000.0,                                  //waist
+    //     400.0, 800.0, 400.0, 400.0, 250.0, 250.0, 50.0, 50.0, //left hand
+    //     50.0, 50.0,                                           //neck
+    //     400.0, 800.0, 400.0, 400.0, 250.0, 250.0, 50.0, 50.0; //right hand
+
+    // Kd << 15.0, 50.0, 20.0, 25.0, 30.0, 30.0,
+    //     15.0, 50.0, 20.0, 25.0, 30.0, 30.0,
+    //     200.0, 100.0, 100.0,
+    //     10.0, 10.0, 10.0, 10.0, 2.5, 2.0, 2.0, 2.0,
+    //     2.0, 2.0,
+    //     10.0, 10.0, 10.0, 10.0, 2.5, 2.0, 2.0, 2.0;
 
     gui2hand_rot.setZero();
     gui2hand_rot(0, 1) = 1.0;
@@ -94,6 +108,13 @@ CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), 
     FF_torque.setZero();
     FF_total_torque.setZero();
     FF_contact_torque.setZero();
+
+    rfoot_trajectory_float_.translation().setZero();
+    lfoot_trajectory_float_.translation().setZero();
+    //rfoot_trajectory_euler_support_.setZero();
+    //lfoot_trajectory_euler_support_.setZero();
+    rfoot_trajectory_float_.linear() = Matrix3d::Identity();
+    lfoot_trajectory_float_.linear() = Matrix3d::Identity();
 
     file[0].open(FILE_NAMES[0].c_str());
     file[0] << "RH_Xd" << "\t" << "RH_Yd" << "\t" << "RH_Zd"
@@ -161,7 +182,8 @@ void CustomController::taskCommandToCC(TaskCommand tc_)
 void CustomController::computeSlow()
 {
     if (tc.mode == 10)
-    { task_torque.setZero();
+    { 
+        task_torque.setZero();
         wbc_.set_contact(rd_, 1, 1);
 
         if (tc.task_init)
@@ -182,17 +204,64 @@ void CustomController::computeSlow()
 
                 rd_.J_task.setZero(task_number, MODEL_DOF_VIRTUAL);
                 rd_.f_star.setZero(task_number);
+                
+                Jtest.resize(6,6);
+                Jtest.setZero();
+                Atest.resize(6,6);
+                Atest.setZero();
+                torque_fric_arb.resize(6);
+                torque_fric_arb.setZero();
+                effective_fric.resize(6);
+                effective_fric.setZero();
 
-                COM_init = rd_.link_[Pelvis].xpos - rd_.link_[Right_Foot].xpos; //rd_.link_[Pelvis].xpos;//
+                wkc_.walking_tick = 0;
+                wkc_.getRobotInitState(rd_);
 
-                rd_.link_[Pelvis].x_desired = rd_.link_[Pelvis].xpos - rd_.link_[Right_Foot].xpos; //COM_init;//
-                rd_.link_[Pelvis].x_desired(0) = COM_init(0) + tc.l_x;                             //rd_.link_[Pelvis].xpos(0) + tc.l_x;//
-                rd_.link_[Pelvis].x_desired(1) = COM_init(1) + tc.l_y;                             //rd_.link_[Pelvis].xpos(1) + tc.l_y;//
-                rd_.link_[Pelvis].x_desired(2) = COM_init(2) + tc.l_z;                             //rd_.link_[Pelvis].xpos(2) + tc.l_z;//
-                                                                                                   //rd_.link_[Pelvis].rot_desired = Matrix3d::Identity();
-                rd_.link_[Pelvis].rot_desired = DyrosMath::rotateWithX(tc.roll * 3.1415 / 180.0);
-                RH_x_init_local = rd_.link_[Right_Hand].xpos - rd_.link_[Upper_Body].xpos; //rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Right_Hand].xpos - rd_.link_[Upper_Body].xpos);
-                LH_x_init_local = rd_.link_[Left_Hand].xpos - rd_.link_[Upper_Body].xpos;  //rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Left_Hand].xpos - rd_.link_[Upper_Body].xpos);
+                if(controltype == 3)
+                {
+                    q_init = rd_.q_;
+                    q_desired = rd_.q_;
+                    q_desired_pre = rd_.q_;
+
+                    Jr.resize(6,6);
+                    Jr.setZero();
+                    Jl.resize(6,6);
+                    Jl.setZero();
+                    R_xdot.resize(6);
+                    R_xdot.setZero();
+                    L_xdot.resize(6);
+                    L_xdot.setZero();
+
+                    pelv_rpy_current_ = DyrosMath::rot2Euler(rd_.link_[Pelvis].Rotm);
+                    pelv_yaw_rot_current_from_global_ = DyrosMath::rotateWithZ(pelv_rpy_current_(2));
+
+                    pelv_float_init_.linear() = DyrosMath::inverseIsometry3d(pelv_yaw_rot_current_from_global_) * rd_.link_[Pelvis].Rotm;
+                    pelv_float_init_.translation() = DyrosMath::multiplyIsometry3dVector3d(DyrosMath::inverseIsometry3d(pelv_yaw_rot_current_from_global_),rd_.link_[Pelvis].xpos);
+
+                    lfoot_float_init_.linear() = DyrosMath::inverseIsometry3d(pelv_yaw_rot_current_from_global_) * rd_.link_[Left_Foot].Rotm;
+                    lfoot_float_init_.translation() = DyrosMath::multiplyIsometry3dVector3d(DyrosMath::inverseIsometry3d(pelv_yaw_rot_current_from_global_),rd_.link_[Left_Foot].xpos);  // 지면에서 Ankle frame 위치
+    
+                    rfoot_float_init_.linear() = DyrosMath::inverseIsometry3d(pelv_yaw_rot_current_from_global_) * rd_.link_[Right_Foot].Rotm;
+                    rfoot_float_init_.translation() = DyrosMath::multiplyIsometry3dVector3d(DyrosMath::inverseIsometry3d(pelv_yaw_rot_current_from_global_),rd_.link_[Right_Foot].xpos); // 지면에서 Ankle frame
+
+                    // = DyrosMath::multiplyIsometry3d(DyrosMath::inverseIsometry3d(rfoot_float_init_), pelv_float_init_);//DyrosMath::inverseIsometry3d(rfoot_float_init_) * pelv_float_init_;//
+                    pelv_support_init_ = DyrosMath::inverseIsometry3d(rfoot_float_init_) * pelv_float_init_;//DyrosMath::multiplyIsometry3d(DyrosMath::inverseIsometry3d(rfoot_float_init_), pelv_float_init_);//
+                    rfoot_support_init_ = DyrosMath::multiplyIsometry3d(DyrosMath::inverseIsometry3d(rfoot_float_init_), rfoot_float_init_);
+                    //rfoot_support_init_.translation() = rd_.link_[Right_Foot].xpos - rd_.link_[Right_Foot].xpos;
+                    lfoot_support_init_ = DyrosMath::multiplyIsometry3d(DyrosMath::inverseIsometry3d(rfoot_float_init_), lfoot_float_init_);
+                    //lfoot_support_init_.translation() = rd_.link_[Left_Foot].xpos - rd_.link_[Right_Foot].xpos;
+                }
+
+                COM_init = rd_.link_[Pelvis].xpos - rd_.link_[Right_Foot].xpos;//rd_.link_[Pelvis].xpos;//
+
+                rd_.link_[Pelvis].x_desired = rd_.link_[Pelvis].xpos - rd_.link_[Right_Foot].xpos;//COM_init;//
+                rd_.link_[Pelvis].x_desired(0) = COM_init(0) + tc.l_x;//rd_.link_[Pelvis].xpos(0) + tc.l_x;//
+				rd_.link_[Pelvis].x_desired(1) = COM_init(1) + tc.l_y;//rd_.link_[Pelvis].xpos(1) + tc.l_y;//
+				rd_.link_[Pelvis].x_desired(2) = COM_init(2) + tc.l_z;//rd_.link_[Pelvis].xpos(2) + tc.l_z;//
+                //rd_.link_[Pelvis].rot_desired = Matrix3d::Identity();
+				rd_.link_[Pelvis].rot_desired = DyrosMath::rotateWithX(tc.roll * 3.1415 / 180.0);
+                RH_x_init_local = rd_.link_[Right_Hand].xpos - rd_.link_[Upper_Body].xpos;//rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Right_Hand].xpos - rd_.link_[Upper_Body].xpos);
+                LH_x_init_local = rd_.link_[Left_Hand].xpos - rd_.link_[Upper_Body].xpos;//rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Left_Hand].xpos - rd_.link_[Upper_Body].xpos);
                 RH_R_init_local = rd_.link_[Upper_Body].rot_init.transpose() * rd_.link_[Right_Hand].rot_init;
                 LH_R_init_local = rd_.link_[Upper_Body].rot_init.transpose() * rd_.link_[Left_Hand].rot_init;
 
@@ -209,16 +278,20 @@ void CustomController::computeSlow()
             }
             rd_.J_task.block(0, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Pelvis].Jac;
             rd_.J_task.block(6, 0, 3, MODEL_DOF_VIRTUAL) = rd_.link_[Upper_Body].Jac_COM_r;
-            rd_.J_task.block(9, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Right_Hand].Jac;// - rd_.link_[Upper_Body].Jac;
-            rd_.J_task.block(15, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Hand].Jac;// - rd_.link_[Upper_Body].Jac;
-
-            q_ddot_est = (rd_.q_dot_ - q_dot_pre) * 1000.0;
-            for (int i = 0; i < MODEL_DOF; ++i)
-            {
-                q_ext_est(i) = rd_.q_(i) + (rd_.Motor_inertia(i + 6, i + 6) * q_ddot_est(i) - dc_.torque_elmo_(i));
-            }
-            q_ext_dot_est = (q_ext_est - q_ext_est_pre) * 1000.0;
-            q_ext_ddot_est = (q_ext_dot_est - q_ext_dot_est_pre) * 1000.0;
+            rd_.J_task.block(9, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Right_Hand].Jac; // - rd_.link_[Upper_Body].Jac;
+            rd_.J_task.block(15, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Hand].Jac; // - rd_.link_[Upper_Body].Jac;
+            //Jtest =  rd_.link_[Right_Foot].Jac.block(0, 12, 6, 6);
+            //Jtest_inv = Jtest.transpose().inverse();
+            //Atest = rd_.A_.block(12,12,6,6);
+            Jr = rd_.link_[Right_Foot].Jac.block(0, 12, 6, 6);
+            Jl = rd_.link_[Left_Foot].Jac.block(0, 6, 6, 6);
+            // q_ddot_est = (rd_.q_dot_ - q_dot_pre) * 1000.0;
+            // for (int i = 0; i < MODEL_DOF; ++i)
+            // {
+            //     q_ext_est(i) = rd_.q_(i) + (rd_.Motor_inertia(i + 6, i + 6) * q_ddot_est(i) - dc_.torque_elmo_(i));
+            // }
+            // q_ext_dot_est = (q_ext_est - q_ext_est_pre) * 1000.0;
+            // q_ext_ddot_est = (q_ext_dot_est - q_ext_dot_est_pre) * 1000.0;
 
             //rd_.link_[Pelvis].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time, tc.command_time + task_time1);
             rd_.link_[Pelvis].Set_Trajectory_rotation(rd_.control_time_, tc.command_time, tc.command_time + task_time1, false);
@@ -233,25 +306,44 @@ void CustomController::computeSlow()
 
                 rd_.link_[Left_Hand].x_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(0);
                 rd_.link_[Left_Hand].v_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(1);
+
+                if(controltype == 3){
+                    rfoot_trajectory_support_.translation()(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, rfoot_support_init_.translation()(i), 0.0, 0.0, rfoot_support_init_.translation()(i), 0.0, 0.0)(0);
+                    rfoot_vel_support_.translation()(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, rfoot_support_init_.translation()(i), 0.0, 0.0, rfoot_support_init_.translation()(i), 0.0, 0.0)(1);
+                    lfoot_trajectory_support_.translation()(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, lfoot_support_init_.translation()(i), 0.0, 0.0, lfoot_support_init_.translation()(i), 0.0, 0.0)(0);
+                    lfoot_vel_support_.translation()(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, lfoot_support_init_.translation()(i), 0.0, 0.0, lfoot_support_init_.translation()(i), 0.0, 0.0)(1);
+                }
             }
 
+            if(controltype == 3){
+                lfoot_trajectory_support_.linear() = lfoot_support_init_.linear();
+                rfoot_trajectory_support_.linear() = rfoot_support_init_.linear();
+                rfoot_vel_support_.linear() = rfoot_vel_support_.linear();
+                lfoot_vel_support_.linear() = lfoot_vel_support_.linear();
+
+                pelv_trajectory_support_.translation()(0) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, pelv_support_init_.translation()(0), 0.0, 0.0, pelv_support_init_.translation()(0) + tc.l_x, 0.0, 0.0)(0);
+                pelv_trajectory_support_.translation()(1) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, pelv_support_init_.translation()(1), 0.0, 0.0, pelv_support_init_.translation()(1) + tc.l_y, 0.0, 0.0)(0);
+                pelv_trajectory_support_.translation()(2) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, pelv_support_init_.translation()(2), 0.0, 0.0, pelv_support_init_.translation()(2) + tc.l_z, 0.0, 0.0)(0);
+                pelv_trajectory_support_.linear() = Matrix3d::Identity(); //pelv_support_init_.linear();
+                pelv_vel_support_.translation()(0) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, pelv_support_init_.translation()(0), 0.0, 0.0, pelv_support_init_.translation()(0) + tc.l_x, 0.0, 0.0)(1);
+                pelv_vel_support_.translation()(1) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, pelv_support_init_.translation()(1), 0.0, 0.0, pelv_support_init_.translation()(1) + tc.l_y, 0.0, 0.0)(1);
+                pelv_vel_support_.translation()(2) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, pelv_support_init_.translation()(2), 0.0, 0.0, pelv_support_init_.translation()(2) + tc.l_z, 0.0, 0.0)(1);
+                pelv_vel_support_.linear() = Matrix3d::Identity(); //pelv_support_init_.linear();
+            }
             //rd_.link_[Right_Hand].x_traj = rd_.link_[Upper_Body].xpos + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].x_traj_local;
             //rd_.link_[Right_Hand].v_traj = rd_.link_[Upper_Body].v + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].v_traj_local;
             rd_.link_[Right_Hand].r_traj = rd_.link_[Upper_Body].rot_init * RH_R_init_local * rd_.link_[Right_Hand].r_traj_local;
             rd_.link_[Right_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Right_Hand].w_traj_local;
-
             //rd_.link_[Left_Hand].x_traj = rd_.link_[Upper_Body].xpos + rd_.link_[Upper_Body].Rotm * rd_.link_[Left_Hand].x_traj_local;
             //rd_.link_[Left_Hand].v_traj = rd_.link_[Upper_Body].v + rd_.link_[Upper_Body].Rotm * rd_.link_[Left_Hand].v_traj_local;
             rd_.link_[Left_Hand].r_traj = rd_.link_[Upper_Body].rot_init * LH_R_init_local * rd_.link_[Left_Hand].r_traj_local;
             rd_.link_[Left_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Left_Hand].w_traj_local;
 
             //d_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, Pelvis, Kp_com, Kd_com, Kp_com_rot, Kd_com_rot);
-
             rd_.f_star(0) = Kp_com(0) * (rd_.link_[Pelvis].x_traj(0) - (rd_.link_[Pelvis].xpos(0) - rd_.link_[Right_Foot].xpos(0))) + Kd_com(0) * (rd_.link_[Pelvis].v_traj(0) - rd_.link_[Pelvis].v(0));
             rd_.f_star(1) = Kp_com(1) * (rd_.link_[Pelvis].x_traj(1) - (rd_.link_[Pelvis].xpos(1) - rd_.link_[Right_Foot].xpos(1))) + Kd_com(1) * (rd_.link_[Pelvis].v_traj(1) - rd_.link_[Pelvis].v(1));
             rd_.f_star(2) = Kp_com(2) * (rd_.link_[Pelvis].x_traj(2) - (rd_.link_[Pelvis].xpos(2) - rd_.link_[Right_Foot].xpos(2))) + Kd_com(2) * (rd_.link_[Pelvis].v_traj(2) - rd_.link_[Pelvis].v(2));
-            rd_.f_star.segment(3, 3) = wbc_.getfstar_rot(rd_, Pelvis, Kp_com_rot, Kd_com_rot);
-            
+            rd_.f_star.segment(3, 3) = wbc_.getfstar_rot(rd_, Pelvis, Kp_com_rot, Kd_com_rot);        
             rd_.f_star.segment(6, 3) = wbc_.getfstar_rot(rd_, Upper_Body, Kp_ub, Kd_ub);
             //rd_.f_star.segment(9, 6) = wbc_.getfstar6d(rd_, Right_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
             for (int i = 0; i < 3; i++){
@@ -281,37 +373,88 @@ void CustomController::computeSlow()
             else if (controltype == 2)
             {
                 task_torque = wbc_.task_control_torque_motor(rd_, rd_.J_task, rd_.f_star);
+                extra_torque = wbc_.task_control_torque_extra(rd_, rd_.J_task, rd_.f_star);
                 //task_torque.setZero();
                 Contact_torque = wbc_.contact_force_redistribution_torque_walking(rd_, task_torque + gravity_torque, contact_force_re, eta_data, fc_ratio, 0);
-                total_torque = gravity_torque + task_torque + Contact_torque;
-                ControlVal_ = gravity_torque + task_torque + Contact_torque;
+                total_torque = gravity_torque + task_torque + Contact_torque;// + extra_torque;
+                ControlVal_ = gravity_torque + task_torque + Contact_torque;// + extra_torque;
+            }
+            else if (controltype == 3)
+            {
+                pelv_trajectory_float_ = DyrosMath::inverseIsometry3d(pelv_trajectory_support_)*pelv_trajectory_support_;
+                lfoot_trajectory_float_ = DyrosMath::inverseIsometry3d(pelv_trajectory_support_)*lfoot_trajectory_support_;
+                rfoot_trajectory_float_ = DyrosMath::inverseIsometry3d(pelv_trajectory_support_)*rfoot_trajectory_support_;
+                computeIkControl_MJ(pelv_trajectory_float_, lfoot_trajectory_float_, rfoot_trajectory_float_, q_d);
+
+                lfoot_vel_float_ = DyrosMath::inverseIsometry3d(pelv_vel_support_)*lfoot_vel_support_;
+                rfoot_vel_float_ = DyrosMath::inverseIsometry3d(pelv_vel_support_)*rfoot_vel_support_;
+                //wkc_.inverseKinematics(rd_, pelv_trajectory_float_, lfoot_trajectory_float_, rfoot_trajectory_float_, q_d);
+                q_desired.segment(0, 12) = q_d;
+                q_desired.segment(12, MODEL_DOF - 12) = q_init.segment(12, MODEL_DOF - 12);
+                //qdot_desired = (q_desired - q_desired_pre)/0.0005;
+                R_xdot.segment(0,3) = rfoot_vel_float_.translation();
+                L_xdot.segment(0,3) = lfoot_vel_float_.translation();
+
+                qdot_desired.segment(0, 6) = Jl.inverse()*L_xdot;
+                qdot_desired.segment(6, 6) = Jr.inverse()*R_xdot;
+                
+                qdot_desired.segment(12, MODEL_DOF - 12).setZero();
+                
+                
+                for(int i = 0; i < MODEL_DOF; i++)
+                { task_torque(i) = Kp(i) * (q_desired(i) - rd_.q_(i)) + Kd(i) * (qdot_desired(i) - rd_.q_dot_(i)); }
+                Contact_torque = wbc_.contact_force_redistribution_torque_walking(rd_, task_torque + gravity_torque, contact_force_re, eta_data, fc_ratio, 0);
+                ControlVal_ = task_torque + gravity_torque + Contact_torque;
+
+                q_desired_pre = q_desired;
             }
         }
+        for(int i=0; i<6; ++i){
+                if(total_torque(i+6) > 0.0)
+                    torque_fric_arb(i) = -3.0;
+                else if(total_torque(i+6) < 0.0)
+                    torque_fric_arb(i) = 3.0;
+                else
+                    torque_fric_arb(i) = 0.0;
+        }
+        //effective_fric = Jtest_inv*torque_fric_arb;
+
         q_dot_pre = rd_.q_dot_;
         q_ext_est_pre = q_ext_est;
         q_ext_dot_est_pre = q_ext_dot_est;
 
-		    pel_ori_desired = rd_.link_[Pelvis].r_traj.eulerAngles(0, 1, 2);
+		pel_ori_desired = rd_.link_[Pelvis].r_traj.eulerAngles(0, 1, 2);
         pel_ori = rd_.link_[Pelvis].Rotm.eulerAngles(0, 1, 2);
 
         file[3] << rd_.control_time_
                 << "\t" << rd_.link_[Pelvis].x_traj(0) << "\t" << rd_.link_[Pelvis].x_traj(1) << "\t" << rd_.link_[Pelvis].x_traj(2)
-                << "\t" << rd_.link_[Pelvis].xpos(0) - rd_.link_[Right_Foot].xpos(0) << "\t" << rd_.link_[Pelvis].xpos(1) - rd_.link_[Right_Foot].xpos(1) << "\t" << rd_.link_[Pelvis].xpos(2) - rd_.link_[Right_Foot].xpos(2)
+                << "\t" << rd_.link_[Pelvis].xpos(0) - rd_.link_[Right_Foot].xpos(0)<< "\t" << rd_.link_[Pelvis].xpos(1) - rd_.link_[Right_Foot].xpos(1)<< "\t" << rd_.link_[Pelvis].xpos(2)- rd_.link_[Right_Foot].xpos(2)
+                << "\t" << pelv_trajectory_float_.translation()(0) << "\t" << pelv_trajectory_float_.translation()(1) << "\t" << pelv_trajectory_float_.translation()(2)
+                << "\t" << rfoot_trajectory_float_.translation()(0) << "\t" << rfoot_trajectory_float_.translation()(1) << "\t" << rfoot_trajectory_float_.translation()(2)
+                << "\t" << lfoot_trajectory_float_.translation()(0) << "\t" << lfoot_trajectory_float_.translation()(1) << "\t" << lfoot_trajectory_float_.translation()(2)
+                << "\t" << -rd_.link_[Pelvis].xpos(0) + rd_.link_[Right_Foot].xpos(0)<< "\t" << -rd_.link_[Pelvis].xpos(1) + rd_.link_[Right_Foot].xpos(1)<< "\t" << -rd_.link_[Pelvis].xpos(2) + rd_.link_[Right_Foot].xpos(2)
+                << "\t" << -rd_.link_[Pelvis].xpos(0) + rd_.link_[Left_Foot].xpos(0)<< "\t" << -rd_.link_[Pelvis].xpos(1) + rd_.link_[Left_Foot].xpos(1)<< "\t" << -rd_.link_[Pelvis].xpos(2) + rd_.link_[Left_Foot].xpos(2)
                 // << "\t" << rd_.link_[Pelvis].v_traj(0) << "\t" << rd_.link_[Pelvis].v_traj(1) << "\t" << rd_.link_[Pelvis].v_traj(2)
                 // << "\t" << rd_.link_[Pelvis].v(0) << "\t" << rd_.link_[Pelvis].v(1) << "\t" << rd_.link_[Pelvis].v(2)
-				        << "\t" << pel_ori_desired(0) << "\t" << pel_ori_desired(1) << "\t" << pel_ori_desired(2)
-                << "\t" << pel_ori(0) << "\t" << pel_ori(1) << "\t" << pel_ori(2)
+				//<< "\t" << pel_ori_desired(0) << "\t" << pel_ori_desired(1) << "\t" << pel_ori_desired(2)
+                //<< "\t" << pel_ori(0) << "\t" << pel_ori(1) << "\t" << pel_ori(2)
                 << endl;
-        // file[2] << rd_.control_time_
-        //         << "\t" << total_torque(0) << "\t" << total_torque(1) << "\t" << total_torque(2)
-				// << "\t" << total_torque(3) << "\t" << total_torque(4) << "\t" << total_torque(5)
-				// << "\t" << total_torque(6) << "\t" << total_torque(7) << "\t" << total_torque(8)
-				// << "\t" << total_torque(9) << "\t" << total_torque(10) << "\t" << total_torque(11)
-				// << "\t" << dc_.torque_elmo_(0) << "\t" << dc_.torque_elmo_(1) << "\t" << dc_.torque_elmo_(2) 
-				// << "\t" << dc_.torque_elmo_(3) << "\t" << dc_.torque_elmo_(4) << "\t" << dc_.torque_elmo_(5) 
-				// << "\t" << dc_.torque_elmo_(6) << "\t" << dc_.torque_elmo_(7) << "\t" << dc_.torque_elmo_(8) 
-				// << "\t" << dc_.torque_elmo_(9) << "\t" << dc_.torque_elmo_(10) << "\t" << dc_.torque_elmo_(11) 
-				// << endl;
+                
+        file[2] << rd_.control_time_
+                << "\t" << q_desired(0) << "\t" << q_desired(1) << "\t" << q_desired(2) << "\t" << q_desired(3) << "\t" << q_desired(4) << "\t" << q_desired(5)
+                << "\t" << rd_.q_(0) << "\t" << rd_.q_(1) << "\t" << rd_.q_(2) << "\t" << rd_.q_(3) << "\t" << rd_.q_(4) << "\t" << rd_.q_(5)
+                << "\t" << q_desired(6) << "\t" << q_desired(7) << "\t" << q_desired(8) << "\t" << q_desired(9) << "\t" << q_desired(10) << "\t" << q_desired(11)
+                << "\t" << rd_.q_(6) << "\t" << rd_.q_(7) << "\t" << rd_.q_(8) << "\t" << rd_.q_(9) << "\t" << rd_.q_(10) << "\t" << rd_.q_(11)
+                << "\t" << qdot_desired(0) << "\t" << qdot_desired(1) << "\t" << qdot_desired(2) << "\t" << qdot_desired(3) << "\t" << qdot_desired(4) << "\t" << qdot_desired(5)
+                << "\t" << qdot_desired(6) << "\t" << qdot_desired(7) << "\t" << qdot_desired(8) << "\t" << qdot_desired(9) << "\t" << qdot_desired(10) << "\t" << qdot_desired(11)
+                // << "\t" << effective_fric(3) << "\t" << effective_fric(4) << "\t" << effective_fric(5)
+                // << "\t" << total_torque(6) << "\t" << total_torque(7) << "\t" << total_torque(8)
+                // << "\t" << total_torque(9) << "\t" << total_torque(10) << "\t" << total_torque(11)
+                // << "\t" << extra_torque(0) << "\t" << extra_torque(1) << "\t" << extra_torque(2)
+                // << "\t" << extra_torque(3) << "\t" << extra_torque(4) << "\t" << extra_torque(5)
+                // << "\t" << extra_torque(6) << "\t" << extra_torque(7) << "\t" << extra_torque(8)
+                // << "\t" << extra_torque(9) << "\t" << extra_torque(10) << "\t" << extra_torque(11)
+                << endl;
     }
     else if (tc.mode == 11)
     { //before single
@@ -330,61 +473,56 @@ void CustomController::computeSlow()
         {
             if (task_state_init == true)
             {
-              cout << "DSP1" << endl;
-              task_number = 9 + 12;
-              task_time1 = 10.0;
+                cout << "DSP1" << endl;
+                task_number = 9 + 12;
+                task_time1 = 10.0;
 
-              for (int i = 0; i < 3; ++i)
-              {
-                Kp_com(i) = 100.0;
-                Kd_com(i) = 10.0; //40 60 100
-                Kp_com_rot(i) = 100.0;
-                Kd_com_rot(i) = 1.0;
-                Kp_ub(i) = 50.0;
-                Kd_ub(i) = 1.0;
-                Kp_hand(i) = 100.0;
-                Kd_hand(i) = 5.0;
-                Kp_hand_rot(i) = 100.0;
-                Kd_hand_rot(i) = 5.0;
-                Kp_foot(i) = 400.0;
-                Kd_foot(i) = 40.0;
-                Kp_foot_rot(i) = 100.0;
-                Kd_foot_rot(i) = 5.0;
-              }
+				for (int i = 0; i < 3; ++i)
+				{
+                    Kp_com(i) = 700.0;
+                    Kd_com(i) = 6.0; //40 60 100
+                    Kp_com_rot(i) = 100.0;
+                    Kd_com_rot(i) = 1.0;
+                    Kp_ub(i) = 50.0;
+                    Kd_ub(i) = 1.0;
+                    Kp_hand(i) = 100.0;
+                    Kd_hand(i) = 5.0;
+                    Kp_hand_rot(i) = 100.0;
+                    Kd_hand_rot(i) = 5.0;
+                    Kp_foot(i) = 400.0;
+                    Kd_foot(i) = 40.0;
+                    Kp_foot_rot(i) = 100.0;
+                    Kd_foot_rot(i) = 5.0;
+                }
 
-              rd_.J_task.setZero(task_number, MODEL_DOF_VIRTUAL);
-              rd_.f_star.setZero(task_number);
+				rd_.J_task.setZero(task_number, MODEL_DOF_VIRTUAL);
+                rd_.f_star.setZero(task_number);
+                rd_.J_task.block(0, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Pelvis].Jac;
+                rd_.J_task.block(6, 0, 3, MODEL_DOF_VIRTUAL) = rd_.link_[Upper_Body].Jac_COM_r;
+                rd_.J_task.block(9, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Right_Hand].Jac;
+                rd_.J_task.block(15, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Hand].Jac;
 
-              COM_init = rd_.link_[Pelvis].xpos - rd_.link_[Right_Foot].xpos; //rd_.link_[Pelvis].xpos;//
+                COM_init = rd_.link_[Pelvis].xpos;
+                rd_.link_[Pelvis].x_desired = rd_.link_[Right_Foot].xpos;
+                rd_.link_[Pelvis].x_desired(1) = rd_.link_[Right_Foot].xpos(1) - 0.02;
+                rd_.link_[Pelvis].x_desired(2) = rd_.link_[Pelvis].xpos(2);
+                rd_.link_[Pelvis].rot_desired = Matrix3d::Identity();
+                RH_x_init_local = rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Right_Hand].x_init - rd_.link_[Upper_Body].x_init);
+                LH_x_init_local = rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Left_Hand].x_init - rd_.link_[Upper_Body].x_init);
+                RH_R_init_local = rd_.link_[Upper_Body].rot_init.transpose() * rd_.link_[Right_Hand].rot_init;
+                LH_R_init_local = rd_.link_[Upper_Body].rot_init.transpose() * rd_.link_[Left_Hand].rot_init;
 
-                //rd_.link_[Pelvis].x_desired = rd_.link_[Pelvis].xpos - rd_.link_[Right_Foot].xpos; //COM_init;//
-                rd_.link_[Pelvis].x_desired(0) = COM_init(0);                             //rd_.link_[Pelvis].xpos(0) + tc.l_x;//
-                rd_.link_[Pelvis].x_desired(1) = -0.03;                             //rd_.link_[Pelvis].xpos(1) + tc.l_y;//
-                rd_.link_[Pelvis].x_desired(2) = COM_init(2);                             //rd_.link_[Pelvis].xpos(2) + tc.l_z;//
+                RH_R_target_local = Matrix3d::Identity();
+                LH_R_target_local = Matrix3d::Identity();
 
-              rd_.link_[Pelvis].rot_desired = Matrix3d::Identity();
-              RH_x_init_local = rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Right_Hand].x_init - rd_.link_[Upper_Body].x_init);
-              LH_x_init_local = rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Left_Hand].x_init - rd_.link_[Upper_Body].x_init);
-              RH_R_init_local = rd_.link_[Upper_Body].rot_init.transpose() * rd_.link_[Right_Hand].rot_init;
-              LH_R_init_local = rd_.link_[Upper_Body].rot_init.transpose() * rd_.link_[Left_Hand].rot_init;
+                q_ddot_est.setZero();
+                for (int i = 0; i < MODEL_DOF; ++i)
+                {
+                    q_ext_est(i) = rd_.q_(i) + (1.0 / 20000.0) * (-dc_.torque_elmo_(i));
+                }
 
-              RH_R_target_local = Matrix3d::Identity();
-              LH_R_target_local = Matrix3d::Identity();
-
-              q_ddot_est.setZero();
-              for (int i = 0; i < MODEL_DOF; ++i)
-              {
-                q_ext_est(i) = rd_.q_(i) + (1.0 / 20000.0) * (-dc_.torque_elmo_(i));
-              }
-
-              task_state_init = false;
+                task_state_init = false;
             }
-
-            rd_.J_task.block(0, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Pelvis].Jac;
-            rd_.J_task.block(6, 0, 3, MODEL_DOF_VIRTUAL) = rd_.link_[Upper_Body].Jac_COM_r;
-            rd_.J_task.block(9, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Right_Hand].Jac;
-            rd_.J_task.block(15, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Hand].Jac;
-
             q_ddot_est = (rd_.q_dot_ - q_dot_pre) * 1000.0;
             for (int i = 0; i < MODEL_DOF; ++i)
             {
@@ -393,14 +531,11 @@ void CustomController::computeSlow()
             q_ext_dot_est = (q_ext_est - q_ext_est_pre) * 1000.0;
             q_ext_ddot_est = (q_ext_dot_est - q_ext_dot_est_pre) * 1000.0;
 
-            //rd_.link_[Pelvis].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time, tc.command_time + task_time1);
+            rd_.link_[Pelvis].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time, tc.command_time + task_time1);
             rd_.link_[Pelvis].Set_Trajectory_rotation(rd_.control_time_, tc.command_time, tc.command_time + task_time1, false);
 
             for (int i = 0; i < 3; ++i)
             {
-                rd_.link_[Pelvis].x_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, COM_init(i), 0.0, 0.0, rd_.link_[Pelvis].x_desired(i), 0.0, 0.0)(0);
-                rd_.link_[Pelvis].v_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, COM_init(i), 0.0, 0.0, rd_.link_[Pelvis].x_desired(i), 0.0, 0.0)(1);
-
                 rd_.link_[Right_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(0);
                 rd_.link_[Right_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(1);
 
@@ -418,11 +553,7 @@ void CustomController::computeSlow()
             rd_.link_[Left_Hand].r_traj = rd_.link_[Upper_Body].rot_init * LH_R_init_local * rd_.link_[Left_Hand].r_traj_local;
             rd_.link_[Left_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Left_Hand].w_traj_local;
 
-            //rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, Pelvis, Kp_com, Kd_com, Kp_com_rot, Kd_com_rot);
-            rd_.f_star(0) = Kp_com(0) * (rd_.link_[Pelvis].x_traj(0) - (rd_.link_[Pelvis].xpos(0) - rd_.link_[Right_Foot].xpos(0))) + Kd_com(0) * (rd_.link_[Pelvis].v_traj(0) - rd_.link_[Pelvis].v(0));
-            rd_.f_star(1) = Kp_com(1) * (rd_.link_[Pelvis].x_traj(1) - (rd_.link_[Pelvis].xpos(1) - rd_.link_[Right_Foot].xpos(1))) + Kd_com(1) * (rd_.link_[Pelvis].v_traj(1) - rd_.link_[Pelvis].v(1));
-            rd_.f_star(2) = Kp_com(2) * (rd_.link_[Pelvis].x_traj(2) - (rd_.link_[Pelvis].xpos(2) - rd_.link_[Right_Foot].xpos(2))) + Kd_com(2) * (rd_.link_[Pelvis].v_traj(2) - rd_.link_[Pelvis].v(2));
-            rd_.f_star.segment(3, 3) = wbc_.getfstar_rot(rd_, Pelvis, Kp_com_rot, Kd_com_rot);
+            rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, Pelvis, Kp_com, Kd_com, Kp_com_rot, Kd_com_rot);
             rd_.f_star.segment(6, 3) = wbc_.getfstar_rot(rd_, Upper_Body, Kp_ub, Kd_ub);
             rd_.f_star.segment(9, 6) = wbc_.getfstar6d(rd_, Right_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
             rd_.f_star.segment(15, 6) = wbc_.getfstar6d(rd_, Left_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
@@ -449,7 +580,7 @@ void CustomController::computeSlow()
 
         file[3] << rd_.control_time_
                 << "\t" << rd_.link_[Pelvis].x_traj(0) << "\t" << rd_.link_[Pelvis].x_traj(1) << "\t" << rd_.link_[Pelvis].x_traj(2)
-                << "\t" << rd_.link_[Pelvis].xpos(0) - rd_.link_[Right_Foot].xpos(0) << "\t" << rd_.link_[Pelvis].xpos(1) - rd_.link_[Right_Foot].xpos(1) << "\t" << rd_.link_[Pelvis].xpos(2) - rd_.link_[Right_Foot].xpos(2)
+                << "\t" << rd_.link_[Pelvis].xpos(0) << "\t" << rd_.link_[Pelvis].xpos(1) << "\t" << rd_.link_[Pelvis].xpos(2)
                 << endl;
     }
     else if (tc.mode == 12)
@@ -590,7 +721,210 @@ void CustomController::computeSlow()
     }
     else if (tc.mode == 13)
     { //IROS rebuild
-        task_torque.setZero();
+        /*task_torque.setZero();
+
+        if (tc.task_init)
+        {
+            rd_.link_[Upper_Body].rot_desired = Matrix3d::Identity();
+            tc.task_init = false;
+            task_state_n = 1;
+        }
+        rd_.link_[Upper_Body].Set_Trajectory_rotation(rd_.control_time_, tc.command_time, tc.command_time + tc.traj_time, false);
+
+        if (task_state_n == 1)
+        {
+            wbc_.set_contact(rd_, 1, 1);
+
+            if (task_state_init == true)
+            {
+                cout << "DSP1" << endl;
+                task_number = 9 + 12;
+                task_time1 = 10.0;
+
+                rd_.J_task.setZero(task_number, MODEL_DOF_VIRTUAL);
+                rd_.f_star.setZero(task_number);
+                rd_.J_task.block(0, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[COM_id].Jac;
+                rd_.J_task.block(6, 0, 3, MODEL_DOF_VIRTUAL) = rd_.link_[Upper_Body].Jac_COM_r;
+                rd_.J_task.block(9, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Right_Hand].Jac;
+                rd_.J_task.block(15, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Hand].Jac;
+
+                COM_init = rd_.link_[COM_id].xpos;
+                rd_.link_[COM_id].x_desired = rd_.link_[Right_Foot].xpos;
+                rd_.link_[COM_id].x_desired(2) = rd_.link_[COM_id].xpos(2);
+                rd_.link_[COM_id].rot_desired = Matrix3d::Identity();
+                RH_x_init_local = rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Right_Hand].x_init - rd_.link_[Upper_Body].x_init);
+                LH_x_init_local = rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Left_Hand].x_init - rd_.link_[Upper_Body].x_init);
+                RH_R_init_local = rd_.link_[Upper_Body].rot_init.transpose() * rd_.link_[Right_Hand].rot_init;
+                LH_R_init_local = rd_.link_[Upper_Body].rot_init.transpose() * rd_.link_[Left_Hand].rot_init;
+
+                RH_R_target_local = Matrix3d::Identity();
+                LH_R_target_local = Matrix3d::Identity();
+
+                task_state_init = false;
+            }
+            gravity_torque = wbc_.gravity_compensation_torque(rd_, false, false);
+
+            rd_.link_[COM_id].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time, tc.command_time + task_time1);
+            rd_.link_[COM_id].Set_Trajectory_rotation(rd_.control_time_, tc.command_time, tc.command_time + task_time1, false);
+
+            for (int i = 0; i < 3; ++i)
+            {
+                rd_.link_[Right_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(0);
+                rd_.link_[Right_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(1);
+
+                rd_.link_[Left_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(0);
+                rd_.link_[Left_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(1);
+            }
+
+            rd_.link_[Right_Hand].x_traj = rd_.link_[Upper_Body].xpos + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].x_traj_local;
+            rd_.link_[Right_Hand].v_traj = rd_.link_[Upper_Body].v + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].v_traj_local;
+            rd_.link_[Right_Hand].r_traj = rd_.link_[Upper_Body].rot_init * RH_R_init_local * rd_.link_[Right_Hand].r_traj_local;
+            rd_.link_[Right_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Right_Hand].w_traj_local;
+
+            rd_.link_[Left_Hand].x_traj = rd_.link_[Upper_Body].xpos + rd_.link_[Upper_Body].Rotm * rd_.link_[Left_Hand].x_traj_local;
+            rd_.link_[Left_Hand].v_traj = rd_.link_[Upper_Body].v + rd_.link_[Upper_Body].Rotm * rd_.link_[Left_Hand].v_traj_local;
+            rd_.link_[Left_Hand].r_traj = rd_.link_[Upper_Body].rot_init * LH_R_init_local * rd_.link_[Left_Hand].r_traj_local;
+            rd_.link_[Left_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Left_Hand].w_traj_local;
+
+            rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, COM_id, Kp_com, Kd_com, Kp_com, Kd_com);
+            rd_.f_star.segment(6, 3) = wbc_.getfstar_rot(rd_, Upper_Body, Kp_ub, Kd_ub);
+            rd_.f_star.segment(9, 6) = wbc_.getfstar6d(rd_, Right_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
+            rd_.f_star.segment(15, 6) = wbc_.getfstar6d(rd_, Left_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
+
+            task_torque = wbc_.task_control_torque_motor(rd_, rd_.J_task, rd_.f_star);
+
+            if (rd_.control_time_ >= tc.command_time + task_time1 - 0.1)
+            {
+                fc_ratio = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + task_time1 - 0.1, tc.command_time + task_time1, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0)(0);
+            }
+            else
+            {
+                fc_ratio = 1.0;
+            }
+
+            Contact_torque = wbc_.contact_force_redistribution_torque_walking(rd_, task_torque + gravity_torque, contact_force_re, eta_data, fc_ratio, 0);
+
+            ControlVal_ = gravity_torque + task_torque + Contact_torque;
+
+            if (rd_.control_time_ >= tc.command_time + task_time1)
+            {
+                task_state_init = true;
+                task_state_n = 2;
+            }
+        }
+        else if (task_state_n == 2)
+        {
+            wbc_.set_contact(rd_, 0, 1);
+
+            if (task_state_init == true)
+            {
+                cout << "SSP1" << endl;
+                task_number = 9 + 6 + 12;
+                task_time2 = 10.0;
+
+                rd_.J_task.setZero(task_number, MODEL_DOF_VIRTUAL);
+                rd_.f_star.setZero(task_number);
+                rd_.J_task.block(0, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[COM_id].Jac;
+                rd_.J_task.block(6, 0, 3, MODEL_DOF_VIRTUAL) = rd_.link_[Upper_Body].Jac_COM_r;
+                rd_.J_task.block(9, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Foot].Jac;
+                rd_.J_task.block(15, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Right_Hand].Jac;
+                rd_.J_task.block(21, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Hand].Jac;
+
+                rd_.link_[COM_id].x_init = rd_.link_[COM_id].x_desired;
+                rd_.link_[Left_Foot].Set_initpos();
+                rd_.link_[Right_Hand].Set_initpos();
+                rd_.link_[Left_Hand].Set_initpos();
+
+                rd_.link_[COM_id].x_desired = rd_.link_[COM_id].xpos;
+                rd_.link_[COM_id].rot_desired = Matrix3d::Identity();
+
+                rd_.link_[Left_Foot].x_desired = rd_.link_[Left_Foot].xpos;
+                rd_.link_[Left_Foot].x_desired(2) = rd_.link_[Left_Foot].xpos(2) + 0.03;
+                rd_.link_[Left_Foot].rot_desired = Matrix3d::Identity();
+
+                RH_x_init_local = rd_.link_[Upper_Body].Rotm.transpose() * (rd_.link_[Right_Hand].xpos - rd_.link_[Upper_Body].xpos);
+                LH_x_init_local = rd_.link_[Upper_Body].Rotm.transpose() * (rd_.link_[Left_Hand].xpos - rd_.link_[Upper_Body].xpos);
+                RH_R_init_local = rd_.link_[Upper_Body].Rotm.transpose() * rd_.link_[Right_Hand].Rotm;
+                LH_R_init_local = rd_.link_[Upper_Body].Rotm.transpose() * rd_.link_[Left_Hand].Rotm;
+
+                RH_R_target_local = Matrix3d::Identity();
+                LH_R_target_local = Matrix3d::Identity();
+
+                task_state_init = false;
+            }
+            gravity_torque = wbc_.gravity_compensation_torque(rd_, false, false);
+
+            rd_.link_[COM_id].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time + task_time1, tc.command_time + task_time1 + task_time2);
+            rd_.link_[COM_id].Set_Trajectory_rotation(rd_.control_time_, tc.command_time + task_time1, tc.command_time + task_time1 + task_time2, false);
+
+            rd_.link_[Left_Foot].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time + task_time1, tc.command_time + task_time1 + task_time2);
+            rd_.link_[Left_Foot].Set_Trajectory_rotation(rd_.control_time_, tc.command_time + task_time1, tc.command_time + task_time1 + task_time2, false);
+
+            for (int i = 0; i < 3; ++i)
+            {
+                rd_.link_[Right_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + task_time1, tc.command_time + task_time1 + task_time2, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(0);
+                rd_.link_[Right_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + task_time1, tc.command_time + task_time1 + task_time2, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(1);
+
+                rd_.link_[Left_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + task_time1, tc.command_time + task_time1 + task_time2, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(0);
+                rd_.link_[Left_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + task_time1, tc.command_time + task_time1 + task_time2, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(1);
+            }
+
+            rd_.link_[Right_Hand].x_traj = rd_.link_[Upper_Body].xpos + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].x_traj_local;
+            rd_.link_[Right_Hand].v_traj = rd_.link_[Upper_Body].v + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].v_traj_local;
+            rd_.link_[Right_Hand].r_traj = rd_.link_[Upper_Body].rot_init * RH_R_init_local * rd_.link_[Right_Hand].r_traj_local;
+            rd_.link_[Right_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Right_Hand].w_traj_local;
+
+            rd_.link_[Left_Hand].x_traj = rd_.link_[Upper_Body].xpos + rd_.link_[Upper_Body].Rotm * rd_.link_[Left_Hand].x_traj_local;
+            rd_.link_[Left_Hand].v_traj = rd_.link_[Upper_Body].v + rd_.link_[Upper_Body].Rotm * rd_.link_[Left_Hand].v_traj_local;
+            rd_.link_[Left_Hand].r_traj = rd_.link_[Upper_Body].rot_init * LH_R_init_local * rd_.link_[Left_Hand].r_traj_local;
+            rd_.link_[Left_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Left_Hand].w_traj_local;
+
+            rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, COM_id, Kp_com, Kd_com, Kp_com, Kd_com);
+            rd_.f_star.segment(6, 3) = wbc_.getfstar_rot(rd_, Upper_Body, Kp_ub, Kd_ub);
+            rd_.f_star.segment(9, 6) = wbc_.getfstar6d(rd_, Left_Foot, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
+            rd_.f_star.segment(15, 6) = wbc_.getfstar6d(rd_, Right_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
+            rd_.f_star.segment(21, 6) = wbc_.getfstar6d(rd_, Left_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
+
+            task_torque = wbc_.task_control_torque_motor(rd_, rd_.J_task, rd_.f_star);
+            ControlVal_ = gravity_torque + task_torque;
+
+            if (rd_.control_time_ >= tc.command_time + task_time1 + task_time2)
+            {
+                task_state_init = true;
+                task_state_n = 3;
+            }
+        }
+        else if (task_state_n == 3)
+        {
+            wbc_.set_contact(rd_, 0, 1);
+
+            if (task_state_init == true)
+            {
+                cout << "SSP2" << endl;
+                task_number = 9 + 6 + 12;
+                task_time2 = 10.0;
+
+                rd_.J_task.setZero(task_number, MODEL_DOF_VIRTUAL);
+                rd_.f_star.setZero(task_number);
+                rd_.J_task.block(0, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[COM_id].Jac;
+                rd_.J_task.block(6, 0, 3, MODEL_DOF_VIRTUAL) = rd_.link_[Upper_Body].Jac_COM_r;
+                rd_.J_task.block(9, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Foot].Jac;
+                rd_.J_task.block(15, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Right_Hand].Jac;
+                rd_.J_task.block(21, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Hand].Jac;
+
+                rd_.link_[COM_id].x_init = rd_.link_[COM_id].x_desired;
+                rd_.link_[Left_Foot].Set_initpos();
+                rd_.link_[Right_Hand].Set_initpos();
+                rd_.link_[Left_Hand].Set_initpos();
+
+                rd_.link_[COM_id].x_desired = rd_.link_[COM_id].xpos;
+                rd_.link_[COM_id].rot_desired = Matrix3d::Identity();
+
+                //rd_.link_[Left_Foot].x_desired = rd_.link_[Left_Foot].xpos;
+                rd_.link_[Left_Foot].x_desired(2) = rd_.link_[Left_Foot].x_desired(2) - 0.04;
+                rd_.link_[Left_Foot].rot_desired = Matrix3d::Identity();
+
+                RH_x_init_local = rdtask_torque.setZero();
 
         if (tc.task_init)
         {
@@ -936,7 +1270,151 @@ void CustomController::computeSlow()
                 // << "\t" << rd_.link_[Right_Foot].xpos(0) << "\t" << rd_.link_[Right_Foot].xpos(1) << "\t" << rd_.link_[Right_Foot].xpos(2)
                 // << "\t" << rd_.link_[Left_Foot].x_traj(0) << "\t" << rd_.link_[Left_Foot].x_traj(1) << "\t" << rd_.link_[Left_Foot].x_traj(2)
                 // << "\t" << rd_.link_[Left_Foot].xpos(0) << "\t" << rd_.link_[Left_Foot].xpos(1) << "\t" << rd_.link_[Left_Foot].xpos(2)
-                << endl;
+                << endl;_.link_[Upper_Body].Rotm.transpose() * (rd_.link_[Right_Hand].xpos - rd_.link_[Upper_Body].xpos);
+                LH_x_init_local = rd_.link_[Upper_Body].Rotm.transpose() * (rd_.link_[Left_Hand].xpos - rd_.link_[Upper_Body].xpos);
+                RH_R_init_local = rd_.link_[Upper_Body].Rotm.transpose() * rd_.link_[Right_Hand].Rotm;
+                LH_R_init_local = rd_.link_[Upper_Body].Rotm.transpose() * rd_.link_[Left_Hand].Rotm;
+
+                RH_R_target_local = Matrix3d::Identity();
+                LH_R_target_local = Matrix3d::Identity();
+
+                task_state_init = false;
+            }
+            gravity_torque = wbc_.gravity_compensation_torque(rd_, false, false);
+
+            rd_.link_[COM_id].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time + task_time1 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2);
+            rd_.link_[COM_id].Set_Trajectory_rotation(rd_.control_time_, tc.command_time + task_time1 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2, false);
+
+            rd_.link_[Left_Foot].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time + task_time1 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2);
+            rd_.link_[Left_Foot].Set_Trajectory_rotation(rd_.control_time_, tc.command_time + task_time1 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2, false);
+
+            for (int i = 0; i < 3; ++i)
+            {
+                rd_.link_[Right_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + task_time1 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(0);
+                rd_.link_[Right_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + task_time1 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(1);
+
+                rd_.link_[Left_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + task_time1 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(0);
+                rd_.link_[Left_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + task_time1 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(1);
+            }
+
+            rd_.link_[Right_Hand].x_traj = rd_.link_[Upper_Body].xpos + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].x_traj_local;
+            rd_.link_[Right_Hand].v_traj = rd_.link_[Upper_Body].v + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].v_traj_local;
+            rd_.link_[Right_Hand].r_traj = rd_.link_[Upper_Body].rot_init * RH_R_init_local * rd_.link_[Right_Hand].r_traj_local;
+            rd_.link_[Right_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Right_Hand].w_traj_local;
+
+            rd_.link_[Left_Hand].x_traj = rd_.link_[Upper_Body].xpos + rd_.link_[Upper_Body].Rotm * rd_.link_[Left_Hand].x_traj_local;
+            rd_.link_[Left_Hand].v_traj = rd_.link_[Upper_Body].v + rd_.link_[Upper_Body].Rotm * rd_.link_[Left_Hand].v_traj_local;
+            rd_.link_[Left_Hand].r_traj = rd_.link_[Upper_Body].rot_init * LH_R_init_local * rd_.link_[Left_Hand].r_traj_local;
+            rd_.link_[Left_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Left_Hand].w_traj_local;
+
+            rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, COM_id, Kp_com, Kd_com, Kp_com, Kd_com);
+            rd_.f_star.segment(6, 3) = wbc_.getfstar_rot(rd_, Upper_Body, Kp_ub, Kd_ub);
+            rd_.f_star.segment(9, 6) = wbc_.getfstar6d(rd_, Left_Foot, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
+            rd_.f_star.segment(15, 6) = wbc_.getfstar6d(rd_, Right_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
+            rd_.f_star.segment(21, 6) = wbc_.getfstar6d(rd_, Left_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
+
+            task_torque = wbc_.task_control_torque_motor(rd_, rd_.J_task, rd_.f_star);
+            ControlVal_ = gravity_torque + task_torque;
+
+            if (rd_.control_time_ >= tc.command_time + task_time1 + task_time2 + task_time2)
+            {
+                task_state_init = true;
+                task_state_n = 4;
+            }
+        }
+        if (task_state_n == 4)
+        {
+            wbc_.set_contact(rd_, 1, 1);
+
+            if (task_state_init == true)
+            {
+                cout << "DSP2" << endl;
+                task_number = 9 + 12;
+                task_time3 = 10.0;
+
+                rd_.J_task.setZero(task_number, MODEL_DOF_VIRTUAL);
+                rd_.f_star.setZero(task_number);
+                rd_.J_task.block(0, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[COM_id].Jac;
+                rd_.J_task.block(6, 0, 3, MODEL_DOF_VIRTUAL) = rd_.link_[Upper_Body].Jac_COM_r;
+                rd_.J_task.block(9, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Right_Hand].Jac;
+                rd_.J_task.block(15, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Hand].Jac;
+
+                rd_.link_[COM_id].x_init = rd_.link_[COM_id].x_desired;
+                rd_.link_[COM_id].x_desired = 0.5 * rd_.link_[Right_Foot].xpos + 0.5 * rd_.link_[Left_Foot].xpos;
+                rd_.link_[COM_id].x_desired(2) = rd_.link_[COM_id].x_init(2);
+                rd_.link_[COM_id].rot_desired = Matrix3d::Identity();
+                RH_x_init_local = rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Right_Hand].xpos - rd_.link_[Upper_Body].xpos);
+                LH_x_init_local = rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Left_Hand].xpos - rd_.link_[Upper_Body].xpos);
+                RH_R_init_local = rd_.link_[Upper_Body].rot_init.transpose() * rd_.link_[Right_Hand].Rotm;
+                LH_R_init_local = rd_.link_[Upper_Body].rot_init.transpose() * rd_.link_[Left_Hand].Rotm;
+
+                RH_R_target_local = Matrix3d::Identity();
+                LH_R_target_local = Matrix3d::Identity();
+
+                task_state_init = false;
+            }
+            gravity_torque = wbc_.gravity_compensation_torque(rd_, false, false);
+
+            rd_.link_[COM_id].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time + task_time1 + task_time2 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2 + task_time3);
+            rd_.link_[COM_id].Set_Trajectory_rotation(rd_.control_time_, tc.command_time, tc.command_time + task_time1, false);
+
+            for (int i = 0; i < 3; ++i)
+            {
+                rd_.link_[Right_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + task_time1 + task_time2 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2 + task_time3, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(0);
+                rd_.link_[Right_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + task_time1 + task_time2 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2 + task_time3, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(1);
+
+                rd_.link_[Left_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + +task_time1 + task_time2 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2 + task_time3, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(0);
+                rd_.link_[Left_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + +task_time1 + task_time2 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2 + task_time3, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(1);
+            }
+
+            rd_.link_[Right_Hand].x_traj = rd_.link_[Upper_Body].xpos + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].x_traj_local;
+            rd_.link_[Right_Hand].v_traj = rd_.link_[Upper_Body].v + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].v_traj_local;
+            rd_.link_[Right_Hand].r_traj = rd_.link_[Upper_Body].rot_init * RH_R_init_local * rd_.link_[Right_Hand].r_traj_local;
+            rd_.link_[Right_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Right_Hand].w_traj_local;
+
+            rd_.link_[Left_Hand].x_traj = rd_.link_[Upper_Body].xpos + rd_.link_[Upper_Body].Rotm * rd_.link_[Left_Hand].x_traj_local;
+            rd_.link_[Left_Hand].v_traj = rd_.link_[Upper_Body].v + rd_.link_[Upper_Body].Rotm * rd_.link_[Left_Hand].v_traj_local;
+            rd_.link_[Left_Hand].r_traj = rd_.link_[Upper_Body].rot_init * LH_R_init_local * rd_.link_[Left_Hand].r_traj_local;
+            rd_.link_[Left_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Left_Hand].w_traj_local;
+
+            rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, COM_id, Kp_com, Kd_com, Kp_com, Kd_com);
+            rd_.f_star.segment(6, 3) = wbc_.getfstar_rot(rd_, Upper_Body, Kp_ub, Kd_ub);
+            rd_.f_star.segment(9, 6) = wbc_.getfstar6d(rd_, Right_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
+            rd_.f_star.segment(15, 6) = wbc_.getfstar6d(rd_, Left_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
+
+            task_torque = wbc_.task_control_torque_motor(rd_, rd_.J_task, rd_.f_star);
+
+            if (rd_.control_time_ >= (tc.command_time + task_time1 + task_time2 + task_time2) && rd_.control_time_ < (tc.command_time + task_time1 + task_time2 + task_time2 + 0.1))
+            {
+                fc_ratio = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time + task_time1 + task_time2 + task_time2, tc.command_time + task_time1 + task_time2 + task_time2 + 0.1, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)(0);
+            }
+            else
+            {
+                fc_ratio = 1.0;
+            }
+
+            Contact_torque = wbc_.contact_force_redistribution_torque_walking(rd_, task_torque + gravity_torque, contact_force_re, eta_data, fc_ratio, 0);
+
+            ControlVal_ = gravity_torque + task_torque + Contact_torque;
+
+            if (rd_.control_time_ >= tc.command_time + task_time1 + task_time2 + task_time2 + task_time3)
+            {
+                task_state_init = true;
+                task_state_n = 4; //지금은 4가 끝
+            }
+        }
+
+        file[3] << rd_.control_time_
+                << "\t" << rd_.link_[COM_id].x_traj(0) << "\t" << rd_.link_[COM_id].x_traj(1) << "\t" << rd_.link_[COM_id].x_traj(2)
+                << "\t" << rd_.link_[COM_id].xpos(0) << "\t" << rd_.link_[COM_id].xpos(1) << "\t" << rd_.link_[COM_id].xpos(2)
+                << "\t" << rd_.link_[COM_id].v_traj(0) << "\t" << rd_.link_[COM_id].v_traj(1) << "\t" << rd_.link_[COM_id].v_traj(2)
+                << "\t" << rd_.link_[COM_id].v(0) << "\t" << rd_.link_[COM_id].v(1) << "\t" << rd_.link_[COM_id].v(2)
+                // << "\t" << rd_.link_[Right_Foot].x_traj(0) << "\t" << rd_.link_[Right_Foot].x_traj(1) << "\t" << rd_.link_[Right_Foot].x_traj(2)
+                // << "\t" << rd_.link_[Right_Foot].xpos(0) << "\t" << rd_.link_[Right_Foot].xpos(1) << "\t" << rd_.link_[Right_Foot].xpos(2)
+                // << "\t" << rd_.link_[Left_Foot].x_traj(0) << "\t" << rd_.link_[Left_Foot].x_traj(1) << "\t" << rd_.link_[Left_Foot].x_traj(2)
+                // << "\t" << rd_.link_[Left_Foot].xpos(0) << "\t" << rd_.link_[Left_Foot].xpos(1) << "\t" << rd_.link_[Left_Foot].xpos(2)
+                << endl;*/
+
     }
     else if (tc.mode == 14)
     { //real walking!!
@@ -1441,4 +1919,56 @@ Eigen::VectorVQd CustomController::Quar2Eul(Eigen::VectorQVQd q)
     q_e(5) = atan2(siny_cosp, cosy_cosp);
 
     return q_e;
+}
+
+void CustomController::computeIkControl_MJ(Eigen::Isometry3d float_trunk_transform, Eigen::Isometry3d float_lleg_transform, Eigen::Isometry3d float_rleg_transform, Eigen::Vector12d& q_des)
+{
+    Eigen::Vector3d R_r, R_D, L_r, L_D ;
+
+    L_D << 0.11 , +0.1025, -0.1025;
+    R_D << 0.11 , -0.1025, -0.1025;
+
+    L_r = float_lleg_transform.rotation().transpose() * (float_trunk_transform.translation() + float_trunk_transform.rotation()*L_D - float_lleg_transform.translation());
+    R_r = float_rleg_transform.rotation().transpose() * (float_trunk_transform.translation() + float_trunk_transform.rotation()*R_D - float_rleg_transform.translation());
+
+    double R_C = 0, L_C = 0, L_upper = 0.35, L_lower = 0.35 , R_alpha = 0, L_alpha = 0;
+
+    L_C = sqrt( pow(L_r(0),2) + pow(L_r(1),2) + pow(L_r(2),2) );
+    R_C = sqrt( pow(R_r(0),2) + pow(R_r(1),2) + pow(R_r(2),2) );
+
+    q_des(3) = (-acos((pow(L_upper,2) + pow(L_lower,2) - pow(L_C,2)) / (2*L_upper*L_lower))+ M_PI) ;
+    q_des(9) = (-acos((pow(L_upper,2) + pow(L_lower,2) - pow(R_C,2)) / (2*L_upper*L_lower))+ M_PI) ;
+    L_alpha = asin(L_upper / L_C * sin(M_PI - q_des(3)));
+    R_alpha = asin(L_upper / R_C * sin(M_PI - q_des(9)));
+
+    q_des(4)  = -atan2(L_r(0), sqrt(pow(L_r(1),2) + pow(L_r(2),2))) - L_alpha ;
+    q_des(10) = -atan2(R_r(0), sqrt(pow(R_r(1),2) + pow(R_r(2),2))) - R_alpha ;
+
+    Eigen::Matrix3d R_Knee_Ankle_Y_rot_mat, L_Knee_Ankle_Y_rot_mat;
+    Eigen::Matrix3d R_Ankle_X_rot_mat, L_Ankle_X_rot_mat;
+    Eigen::Matrix3d R_Hip_rot_mat, L_Hip_rot_mat;
+
+    L_Knee_Ankle_Y_rot_mat = DyrosMath::rotateWithY(-q_des(3)-q_des(4));
+    L_Ankle_X_rot_mat = DyrosMath::rotateWithX(-q_des(5));
+    R_Knee_Ankle_Y_rot_mat = DyrosMath::rotateWithY(-q_des(9)-q_des(10));
+    R_Ankle_X_rot_mat = DyrosMath::rotateWithX(-q_des(11));
+
+    L_Hip_rot_mat.setZero(); R_Hip_rot_mat.setZero();
+
+    L_Hip_rot_mat = float_trunk_transform.rotation().transpose() * float_lleg_transform.rotation() * L_Ankle_X_rot_mat * L_Knee_Ankle_Y_rot_mat;
+    R_Hip_rot_mat = float_trunk_transform.rotation().transpose() * float_rleg_transform.rotation() * R_Ankle_X_rot_mat * R_Knee_Ankle_Y_rot_mat;
+
+    q_des(0) =  atan2(-L_Hip_rot_mat(0,1),L_Hip_rot_mat(1,1)); // Hip yaw
+    q_des(1) =  atan2(L_Hip_rot_mat(2,1), -L_Hip_rot_mat(0,1) * sin(q_des(0)) + L_Hip_rot_mat(1,1)*cos(q_des(0))); // Hip roll
+    q_des(2) =  atan2(-L_Hip_rot_mat(2,0), L_Hip_rot_mat(2,2)) ; // Hip pitch
+    q_des(3) =  q_des(3) ; // Knee pitch
+    q_des(4) =  q_des(4) ; // Ankle pitch
+    q_des(5) =  atan2( L_r(1), L_r(2) ); // Ankle roll
+
+    q_des(6) =  atan2(-R_Hip_rot_mat(0,1),R_Hip_rot_mat(1,1));
+    q_des(7) =  atan2(R_Hip_rot_mat(2,1), -R_Hip_rot_mat(0,1) * sin(q_des(6)) + R_Hip_rot_mat(1,1)*cos(q_des(6)));
+    q_des(8) = atan2(-R_Hip_rot_mat(2,0), R_Hip_rot_mat(2,2));
+    q_des(9) = q_des(9) ;
+    q_des(10) = q_des(10) ;
+    q_des(11) =  atan2( R_r(1), R_r(2) );
 }
