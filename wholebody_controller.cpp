@@ -233,6 +233,8 @@ void WholebodyController::set_robot_init(RobotData &Robot)
     Robot.Slc_k.block(0, 6, MODEL_DOF, MODEL_DOF).setIdentity();
     Robot.Slc_k_T = Robot.Slc_k.transpose();
     Robot.W = Robot.Slc_k * Robot.A_matrix_inverse * Robot.N_C * Robot.Slc_k_T; //2 types for w matrix
+    //Robot.W(3,3) = 0.1*Robot.W(3,3);
+    //Robot.W(9,9) = 0.1*Robot.W(9,9);
 
     Robot.W_inv = DyrosMath::pinv_QR(Robot.W, Robot.qr_V2);
 }
@@ -5049,7 +5051,7 @@ VectorQd WholebodyController::task_control_torque_with_gravity(RobotData &Robot,
     Robot.lambda_inv = J_task * Robot.A_matrix_inverse * Robot.N_C * J_task.transpose();
 
     Robot.lambda = Robot.lambda_inv.inverse();
-    
+
     Robot.J_task_inv_T = Robot.lambda * J_task * Robot.A_matrix_inverse * Robot.N_C;
     Robot.Q = Robot.J_task_inv_T * Robot.Slc_k_T;
     Robot.Q_T_ = Robot.Q.transpose();
@@ -5113,10 +5115,10 @@ VectorQd WholebodyController::task_control_torque_extra(RobotData &Robot, Eigen:
     SiT.setZero(MODEL_DOF + 6, 2);
     SikT.setZero(MODEL_DOF, 2);
     Si(0,9)=1.0;
-    Si(0,15)=1.0;
+    Si(1,15)=1.0;
     SiT = Si.transpose();
     SikT(3,0)=1.0;
-    SikT(9,0)=1.0;
+    SikT(9,1)=1.0;
 
     Robot.J_task_T = J_task.transpose();
 
@@ -5136,9 +5138,6 @@ VectorQd WholebodyController::task_control_torque_extra(RobotData &Robot, Eigen:
     Eigen::MatrixXd Wi;
     Eigen::MatrixXd Wi_inv;
 
-    //Wi.setZero(2,2);
-    //Wi_inv.setZero(2,2);
-
     Wi = Si * Robot.A_matrix_inverse * Robot.N_C * SiT; //2 types for w matrix
     Wi_inv = DyrosMath::pinv_QR(Wi);
 
@@ -5148,7 +5147,7 @@ VectorQd WholebodyController::task_control_torque_extra(RobotData &Robot, Eigen:
 
     VectorQd torque_task;
     torque_task = SikT * Wi_inv * QiT * Qi_tmp_inv * Robot.lambda_motor * f_star_;
-//cout << torque_task << endl << endl;
+
     return torque_task;
 }
 /*
