@@ -1,6 +1,6 @@
 #include "custom_controller.h"
 #define PI 3.141592653589793238462643
-#define controltype 2 //1:original 2:mosf 3:ik
+#define controltype 3 //1:original 2:mosf 3:ik
 
 CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), rd_(rd), wbc_(dc.wbc_), wkc_(dc.wkc_)
 {
@@ -67,33 +67,33 @@ CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), 
         }
     }
 
-    Kp << 1800.0, 2100.0, 2100.0, 2100.0, 1800.0, 1800.0,           //left foot
-        1800.0, 2100.0, 2100.0, 2100.0, 1800.0, 1800.0,             //right foot
-        2200.0, 2200.0, 2200.0,                                  //waist
-        400.0, 800.0, 400.0, 400.0, 250.0, 250.0, 50.0, 50.0, //left hand
-        50.0, 50.0,                                           //neck
-        400.0, 800.0, 400.0, 400.0, 250.0, 250.0, 50.0, 50.0; //right hand
-
-    Kd << 70.0, 90.0, 90.0, 90.0, 80.0, 80.0,
-        70.0, 90.0, 90.0, 90.0, 80.0, 80.0,
-        90.0, 90.0, 1590.0,
-        10.0, 10.0, 10.0, 10.0, 2.5, 2.0, 2.0, 2.0,
-        2.0, 2.0,
-        10.0, 10.0, 10.0, 10.0, 2.5, 2.0, 2.0, 2.0;
-    /////real gain
-    // Kp << 2000.0, 5000.0, 4000.0, 3700.0, 5000.0, 5000.0,           //left foot
-    //     2000.0, 5000.0, 4000.0, 3700.0, 5000.0, 5000.0,             //right foot
-    //     6000.0, 10000.0, 10000.0,                                  //waist
+    // Kp << 1800.0, 2100.0, 2100.0, 2100.0, 1800.0, 1800.0,           //left foot
+    //     1800.0, 2100.0, 2100.0, 2100.0, 1800.0, 1800.0,             //right foot
+    //     2200.0, 2200.0, 2200.0,                                  //waist
     //     400.0, 800.0, 400.0, 400.0, 250.0, 250.0, 50.0, 50.0, //left hand
     //     50.0, 50.0,                                           //neck
     //     400.0, 800.0, 400.0, 400.0, 250.0, 250.0, 50.0, 50.0; //right hand
 
-    // Kd << 15.0, 50.0, 20.0, 25.0, 30.0, 30.0,
-    //     15.0, 50.0, 20.0, 25.0, 30.0, 30.0,
-    //     200.0, 100.0, 100.0,
+    // Kd << 70.0, 90.0, 90.0, 90.0, 80.0, 80.0,
+    //     70.0, 90.0, 90.0, 90.0, 80.0, 80.0,
+    //     90.0, 90.0, 1590.0,
     //     10.0, 10.0, 10.0, 10.0, 2.5, 2.0, 2.0, 2.0,
     //     2.0, 2.0,
     //     10.0, 10.0, 10.0, 10.0, 2.5, 2.0, 2.0, 2.0;
+    /////real gain
+    Kp << 2000.0, 5000.0, 4000.0, 3700.0, 5000.0, 5000.0,           //left foot
+        2000.0, 5000.0, 4000.0, 3700.0, 5000.0, 5000.0,             //right foot
+        6000.0, 10000.0, 10000.0,                                  //waist
+        400.0, 800.0, 400.0, 400.0, 250.0, 250.0, 50.0, 50.0, //left hand
+        50.0, 50.0,                                           //neck
+        400.0, 800.0, 400.0, 400.0, 250.0, 250.0, 50.0, 50.0; //right hand
+
+    Kd << 15.0, 50.0, 20.0, 25.0, 30.0, 30.0,
+        15.0, 50.0, 20.0, 25.0, 30.0, 30.0,
+        200.0, 100.0, 100.0,
+        10.0, 10.0, 10.0, 10.0, 2.5, 2.0, 2.0, 2.0,
+        2.0, 2.0,
+        10.0, 10.0, 10.0, 10.0, 2.5, 2.0, 2.0, 2.0;
 
     gui2hand_rot.setZero();
     gui2hand_rot(0, 1) = 1.0;
@@ -246,9 +246,13 @@ void CustomController::computeSlow()
                     //rfoot_float_init_.translation()(0) = 0;
                     //rfoot_float_init_.translation()(1) = -0.1025;
                     pelv_support_init_ = DyrosMath::inverseIsometry3d(rfoot_float_init_) * pelv_float_init_;//DyrosMath::multiplyIsometry3d(DyrosMath::inverseIsometry3d(rfoot_float_init_), pelv_float_init_);//
+                    pelv_support_euler_init_ = DyrosMath::rot2Euler(pelv_support_init_.linear());
+                    pelv_traj_euler = pelv_support_euler_init_;
                     rfoot_support_init_ = DyrosMath::multiplyIsometry3d(DyrosMath::inverseIsometry3d(rfoot_float_init_), rfoot_float_init_);
+                    rfoot_support_euler_init_ = DyrosMath::rot2Euler(rfoot_support_init_.linear());
                     //rfoot_support_init_.translation() = rd_.link_[Right_Foot].xpos - rd_.link_[Right_Foot].xpos;
                     lfoot_support_init_ = DyrosMath::multiplyIsometry3d(DyrosMath::inverseIsometry3d(rfoot_float_init_), lfoot_float_init_);
+                    lfoot_support_euler_init_ = DyrosMath::rot2Euler(lfoot_support_init_.linear());
                     //lfoot_support_init_.translation() = rd_.link_[Left_Foot].xpos - rd_.link_[Right_Foot].xpos;
                 }
 
@@ -311,23 +315,27 @@ void CustomController::computeSlow()
                     rfoot_vel_support_.translation()(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, rfoot_support_init_.translation()(i), 0.0, 0.0, rfoot_support_init_.translation()(i), 0.0, 0.0)(1);
                     lfoot_trajectory_support_.translation()(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, lfoot_support_init_.translation()(i), 0.0, 0.0, lfoot_support_init_.translation()(i), 0.0, 0.0)(0);
                     lfoot_vel_support_.translation()(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, lfoot_support_init_.translation()(i), 0.0, 0.0, lfoot_support_init_.translation()(i), 0.0, 0.0)(1);
+                    rfoot_traj_euler(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, rfoot_support_euler_init_(i), 0.0, 0.0, 0.0, 0.0, 0.0)(0);
+                    lfoot_traj_euler(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, lfoot_support_euler_init_(i), 0.0, 0.0, 0.0, 0.0, 0.0)(0);
                 }
             }
 
             if(controltype == 3){
-                lfoot_trajectory_support_.linear() = lfoot_support_init_.linear();
-                rfoot_trajectory_support_.linear() = rfoot_support_init_.linear();
-                rfoot_vel_support_.linear() = rfoot_vel_support_.linear();
-                lfoot_vel_support_.linear() = lfoot_vel_support_.linear();
-
+                lfoot_trajectory_support_.linear() = DyrosMath::rotateWithZ(lfoot_traj_euler(2))*DyrosMath::rotateWithY(lfoot_traj_euler(1))*DyrosMath::rotateWithX(lfoot_traj_euler(0));
+                rfoot_trajectory_support_.linear() = DyrosMath::rotateWithZ(rfoot_traj_euler(2))*DyrosMath::rotateWithY(rfoot_traj_euler(1))*DyrosMath::rotateWithX(rfoot_traj_euler(0));
+                rfoot_vel_support_.linear() = DyrosMath::rotateWithZ(rfoot_traj_euler(2))*DyrosMath::rotateWithY(rfoot_traj_euler(1))*DyrosMath::rotateWithX(rfoot_traj_euler(0));//rfoot_vel_support_.linear();
+                lfoot_vel_support_.linear() = DyrosMath::rotateWithZ(lfoot_traj_euler(2))*DyrosMath::rotateWithY(lfoot_traj_euler(1))*DyrosMath::rotateWithX(lfoot_traj_euler(0));//lfoot_vel_support_.linear();
+                pelv_traj_euler(0) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, pelv_support_euler_init_(0), 0.0, 0.0, pelv_support_euler_init_(0)+tc.roll * PI / 180.0, 0.0, 0.0)(0);
                 pelv_trajectory_support_.translation()(0) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, pelv_support_init_.translation()(0), 0.0, 0.0, pelv_support_init_.translation()(0) + tc.l_x, 0.0, 0.0)(0);
                 pelv_trajectory_support_.translation()(1) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, pelv_support_init_.translation()(1), 0.0, 0.0, pelv_support_init_.translation()(1) + tc.l_y, 0.0, 0.0)(0);
                 pelv_trajectory_support_.translation()(2) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, pelv_support_init_.translation()(2), 0.0, 0.0, pelv_support_init_.translation()(2) + tc.l_z, 0.0, 0.0)(0);
-                pelv_trajectory_support_.linear() = pelv_support_init_.linear();
+                //pelv_trajectory_support_.linear() = pelv_support_init_.linear();
+                pelv_trajectory_support_.linear() = DyrosMath::rotateWithZ(pelv_traj_euler(2))*DyrosMath::rotateWithY(pelv_traj_euler(1))*DyrosMath::rotateWithX(pelv_traj_euler(0));
                 pelv_vel_support_.translation()(0) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, pelv_support_init_.translation()(0), 0.0, 0.0, pelv_support_init_.translation()(0) + tc.l_x, 0.0, 0.0)(1);
                 pelv_vel_support_.translation()(1) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, pelv_support_init_.translation()(1), 0.0, 0.0, pelv_support_init_.translation()(1) + tc.l_y, 0.0, 0.0)(1);
                 pelv_vel_support_.translation()(2) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, pelv_support_init_.translation()(2), 0.0, 0.0, pelv_support_init_.translation()(2) + tc.l_z, 0.0, 0.0)(1);
-                pelv_vel_support_.linear() = pelv_support_init_.linear();
+                //pelv_vel_support_.linear() = pelv_support_init_.linear();
+                pelv_vel_support_.linear() = DyrosMath::rotateWithZ(pelv_traj_euler(2))*DyrosMath::rotateWithY(pelv_traj_euler(1))*DyrosMath::rotateWithX(pelv_traj_euler(0));
             }
             //rd_.link_[Right_Hand].x_traj = rd_.link_[Upper_Body].xpos + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].x_traj_local;
             //rd_.link_[Right_Hand].v_traj = rd_.link_[Upper_Body].v + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].v_traj_local;
@@ -387,6 +395,7 @@ void CustomController::computeSlow()
                 //wkc_.inverseKinematics(rd_, pelv_trajectory_float_, lfoot_trajectory_float_, rfoot_trajectory_float_, q_d);
                 q_desired.segment(0, 12) = q_d;
                 q_desired.segment(12, MODEL_DOF - 12) = q_init.segment(12, MODEL_DOF - 12);
+                q_desired(14) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, q_init(13), 0.0, 0.0, q_init(13)+tc.roll * PI / 180.0, 0.0, 0.0)(0);
                 //qdot_desired = (q_desired - q_desired_pre)/0.0005;
                 R_xdot.segment(0,3) = rfoot_vel_float_.translation();
                 L_xdot.segment(0,3) = lfoot_vel_float_.translation();
@@ -395,9 +404,10 @@ void CustomController::computeSlow()
                 qdot_desired.segment(6, 6) = Jr.inverse()*R_xdot;
                 
                 qdot_desired.segment(12, MODEL_DOF - 12).setZero();
-                
+                qdot_desired(14) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, q_init(13), 0.0, 0.0, q_init(13)+tc.roll * PI / 180.0, 0.0, 0.0)(1);
                 
                 for(int i = 0; i < MODEL_DOF; i++)
+                //{ task_torque(i) = Kp(i) * (q_desired(i) - rd_.q_(i)) + Kd(i) * ( - rd_.q_dot_(i)); }
                 { task_torque(i) = Kp(i) * (q_desired(i) - rd_.q_(i)) + Kd(i) * (qdot_desired(i) - rd_.q_dot_(i)); }
                 Contact_torque = wbc_.contact_force_redistribution_torque_walking(rd_, task_torque + gravity_torque, contact_force_re, eta_data, fc_ratio, 0);
                 ControlVal_ = task_torque + gravity_torque + Contact_torque;
