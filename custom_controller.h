@@ -77,6 +77,7 @@ private:
     Eigen::VectorQd Contact_torque;
     Eigen::VectorQd Null_torque;
     Eigen::VectorQd extra_torque;
+    Eigen::VectorXd fstar;
 
     Eigen::VectorQd FF_total_torque;
     Eigen::VectorQd FF_torque;
@@ -137,6 +138,13 @@ private:
     Eigen::Isometry3d pelv_vel_support_; 
     Eigen::Isometry3d rfoot_vel_support_;  //local frame
     Eigen::Isometry3d lfoot_vel_support_;
+
+    Eigen::Vector3d pelv_support_euler_init_;
+    Eigen::Vector3d lfoot_support_euler_init_;
+    Eigen::Vector3d rfoot_support_euler_init_;
+    Eigen::Vector3d pelv_traj_euler;
+    Eigen::Vector3d lfoot_traj_euler;
+    Eigen::Vector3d rfoot_traj_euler;
 
     //Eigen::Isometry3d pelv_support_start_;
     Eigen::Isometry3d pelv_support_init_;
