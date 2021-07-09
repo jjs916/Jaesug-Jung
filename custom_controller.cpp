@@ -1,6 +1,6 @@
 #include "custom_controller.h"
 #define PI 3.141592653589793238462643
-#define controltype 3 //1:original 2:mosf 3:ik
+#define controltype 2 //1:original 2:mosf 3:ik
 
 CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), rd_(rd), wbc_(dc.wbc_), wkc_(dc.wkc_)
 {
@@ -33,10 +33,10 @@ CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), 
         // Kp_foot_rot(i) = 2500.0;
         // Kd_foot_rot(i) = 60.0;
         if(controltype == 1){
-            Kp_com(i) = 10.0;//60.0;
+            Kp_com(i) = 50.0;//60.0;
             Kd_com(i) = 5.0;//5.0;
-            Kp_com_rot(i) = 100.0;
-            Kd_com_rot(i) = 10.0;
+            Kp_com_rot(i) = 550.0;
+            Kd_com_rot(i) = 5.0;
             Kp_ub(i) = 100.0;
             Kd_ub(i) = 10.0;
             Kp_hand(i) = 10.0;
@@ -50,8 +50,8 @@ CustomController::CustomController(DataContainer &dc, RobotData &rd) : dc_(dc), 
         }
         else if (controltype == 2)
         {
-            Kp_com(i) = 700.0;
-            Kd_com(i) = 6.0;//40 60 100
+            Kp_com(i) = 110.0;
+            Kd_com(i) = 7.0;//40 60 100
             Kp_com_rot(i) = 100.0;
             Kd_com_rot(i) = 1.0;
             Kp_ub(i) = 50.0;
@@ -428,7 +428,7 @@ void CustomController::computeSlow()
         q_ext_est_pre = q_ext_est;
         q_ext_dot_est_pre = q_ext_dot_est;
 
-		pel_ori_desired = rd_.link_[Pelvis].r_traj.eulerAngles(0, 1, 2);
+		    pel_ori_desired = rd_.link_[Pelvis].r_traj.eulerAngles(0, 1, 2);
         pel_ori = rd_.link_[Pelvis].Rotm.eulerAngles(0, 1, 2);
 
         file[3] << rd_.control_time_
@@ -479,39 +479,42 @@ void CustomController::computeSlow()
         {
             if (task_state_init == true)
             {
-                cout << "DSP1" << endl;
-                task_number = 9 + 12;
-                task_time1 = 10.0;
+              cout << "DSP1" << endl;
+              task_number = 9 + 12;
+              task_time1 = 10.0;
 
-				for (int i = 0; i < 3; ++i)
-				{
-                    Kp_com(i) = 700.0;
-                    Kd_com(i) = 6.0; //40 60 100
-                    Kp_com_rot(i) = 100.0;
-                    Kd_com_rot(i) = 1.0;
-                    Kp_ub(i) = 50.0;
-                    Kd_ub(i) = 1.0;
-                    Kp_hand(i) = 100.0;
-                    Kd_hand(i) = 5.0;
-                    Kp_hand_rot(i) = 100.0;
-                    Kd_hand_rot(i) = 5.0;
-                    Kp_foot(i) = 400.0;
-                    Kd_foot(i) = 40.0;
-                    Kp_foot_rot(i) = 100.0;
-                    Kd_foot_rot(i) = 5.0;
-                }
+              for (int i = 0; i < 3; ++i)
+              {
+                Kp_com(i) = 90.0;
+                Kd_com(i) = 5.0; //40 60 100
+                Kp_com_rot(i) = 100.0;
+                Kd_com_rot(i) = 1.0;
+                Kp_ub(i) = 50.0;
+                Kd_ub(i) = 1.0;
+                Kp_hand(i) = 100.0;
+                Kd_hand(i) = 5.0;
+                Kp_hand_rot(i) = 100.0;
+                Kd_hand_rot(i) = 5.0;
+                Kp_foot(i) = 400.0;
+                Kd_foot(i) = 40.0;
+                Kp_foot_rot(i) = 100.0;
+                Kd_foot_rot(i) = 5.0;
+              }
 
-				rd_.J_task.setZero(task_number, MODEL_DOF_VIRTUAL);
-                rd_.f_star.setZero(task_number);
-                rd_.J_task.block(0, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Pelvis].Jac;
-                rd_.J_task.block(6, 0, 3, MODEL_DOF_VIRTUAL) = rd_.link_[Upper_Body].Jac_COM_r;
-                rd_.J_task.block(9, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Right_Hand].Jac;
-                rd_.J_task.block(15, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Hand].Jac;
+              rd_.J_task.setZero(task_number, MODEL_DOF_VIRTUAL);
+              rd_.f_star.setZero(task_number);
+              rd_.J_task.block(0, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Pelvis].Jac;
+              rd_.J_task.block(6, 0, 3, MODEL_DOF_VIRTUAL) = rd_.link_[Upper_Body].Jac_COM_r;
+              rd_.J_task.block(9, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Right_Hand].Jac;
+              rd_.J_task.block(15, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Hand].Jac;
 
-                COM_init = rd_.link_[Pelvis].xpos;
-                rd_.link_[Pelvis].x_desired = rd_.link_[Right_Foot].xpos;
-                rd_.link_[Pelvis].x_desired(1) = rd_.link_[Right_Foot].xpos(1) - 0.02;
-                rd_.link_[Pelvis].x_desired(2) = rd_.link_[Pelvis].xpos(2);
+              COM_init = rd_.link_[Pelvis].xpos - rd_.link_[Right_Foot].xpos;//rd_.link_[Pelvis].xpos;//
+
+              rd_.link_[Pelvis].x_desired = rd_.link_[Pelvis].xpos - rd_.link_[Right_Foot].xpos;//COM_init;//
+              rd_.link_[Pelvis].x_desired(0) = COM_init(0);//rd_.link_[Pelvis].xpos(0) + tc.l_x;//
+				      rd_.link_[Pelvis].x_desired(1) = 0.0;//rd_.link_[Pelvis].xpos(1) + tc.l_y;//
+				      rd_.link_[Pelvis].x_desired(2) = COM_init(2);//rd_.link_[Pelvis].xpos(2) + tc.l_z;//
+                //rd_.link_[Pelvis].x_desired = rd_.link_[Right_Foot].xpos;
                 rd_.link_[Pelvis].rot_desired = Matrix3d::Identity();
                 RH_x_init_local = rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Right_Hand].x_init - rd_.link_[Upper_Body].x_init);
                 LH_x_init_local = rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Left_Hand].x_init - rd_.link_[Upper_Body].x_init);
@@ -537,11 +540,14 @@ void CustomController::computeSlow()
             q_ext_dot_est = (q_ext_est - q_ext_est_pre) * 1000.0;
             q_ext_ddot_est = (q_ext_dot_est - q_ext_dot_est_pre) * 1000.0;
 
-            rd_.link_[Pelvis].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time, tc.command_time + task_time1);
+            //rd_.link_[Pelvis].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time, tc.command_time + task_time1);
             rd_.link_[Pelvis].Set_Trajectory_rotation(rd_.control_time_, tc.command_time, tc.command_time + task_time1, false);
 
             for (int i = 0; i < 3; ++i)
             {
+                rd_.link_[Pelvis].x_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, COM_init(i), 0.0, 0.0, rd_.link_[Pelvis].x_desired(i), 0.0, 0.0)(0);
+                rd_.link_[Pelvis].v_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, COM_init(i), 0.0, 0.0, rd_.link_[Pelvis].x_desired(i), 0.0, 0.0)(1);
+
                 rd_.link_[Right_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(0);
                 rd_.link_[Right_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(1);
 
@@ -559,7 +565,10 @@ void CustomController::computeSlow()
             rd_.link_[Left_Hand].r_traj = rd_.link_[Upper_Body].rot_init * LH_R_init_local * rd_.link_[Left_Hand].r_traj_local;
             rd_.link_[Left_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Left_Hand].w_traj_local;
 
-            rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, Pelvis, Kp_com, Kd_com, Kp_com_rot, Kd_com_rot);
+            //rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, Pelvis, Kp_com, Kd_com, Kp_com_rot, Kd_com_rot);
+            rd_.f_star(0) = Kp_com(0) * (rd_.link_[Pelvis].x_traj(0) - (rd_.link_[Pelvis].xpos(0) - rd_.link_[Right_Foot].xpos(0))) + Kd_com(0) * (rd_.link_[Pelvis].v_traj(0) - rd_.link_[Pelvis].v(0));
+            rd_.f_star(1) = Kp_com(1) * (rd_.link_[Pelvis].x_traj(1) - (rd_.link_[Pelvis].xpos(1) - rd_.link_[Right_Foot].xpos(1))) + Kd_com(1) * (rd_.link_[Pelvis].v_traj(1) - rd_.link_[Pelvis].v(1));
+            rd_.f_star(2) = Kp_com(2) * (rd_.link_[Pelvis].x_traj(2) - (rd_.link_[Pelvis].xpos(2) - rd_.link_[Right_Foot].xpos(2))) + Kd_com(2) * (rd_.link_[Pelvis].v_traj(2) - rd_.link_[Pelvis].v(2));
             rd_.f_star.segment(6, 3) = wbc_.getfstar_rot(rd_, Upper_Body, Kp_ub, Kd_ub);
             rd_.f_star.segment(9, 6) = wbc_.getfstar6d(rd_, Right_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
             rd_.f_star.segment(15, 6) = wbc_.getfstar6d(rd_, Left_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
@@ -584,10 +593,10 @@ void CustomController::computeSlow()
         q_ext_est_pre = q_ext_est;
         q_ext_dot_est_pre = q_ext_dot_est;
 
-        file[3] << rd_.control_time_
-                << "\t" << rd_.link_[Pelvis].x_traj(0) << "\t" << rd_.link_[Pelvis].x_traj(1) << "\t" << rd_.link_[Pelvis].x_traj(2)
-                << "\t" << rd_.link_[Pelvis].xpos(0) << "\t" << rd_.link_[Pelvis].xpos(1) << "\t" << rd_.link_[Pelvis].xpos(2)
-                << endl;
+        // file[3] << rd_.control_time_
+        //         << "\t" << rd_.link_[Pelvis].x_traj(0) << "\t" << rd_.link_[Pelvis].x_traj(1) << "\t" << rd_.link_[Pelvis].x_traj(2)
+        //         << "\t" << rd_.link_[Pelvis].xpos(0) << "\t" << rd_.link_[Pelvis].xpos(1) << "\t" << rd_.link_[Pelvis].xpos(2)
+        //         << endl;
     }
     else if (tc.mode == 12)
     { //after single
@@ -597,59 +606,100 @@ void CustomController::computeSlow()
 
             if (task_state_init == true)
             {
-                cout << "SSP1" << endl;
-                task_number = 9 + 6 + 12;
-                task_time1 = tc.traj_time;//10.0;
+              cout << "SSP1" << endl;
+              task_number = 9 + 6 + 12;
+              task_time1 = tc.traj_time; //10.0;
 
-                rd_.J_task.setZero(task_number, MODEL_DOF_VIRTUAL);
-                rd_.f_star.setZero(task_number);
-                rd_.J_task.block(0, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[COM_id].Jac;
-                rd_.J_task.block(6, 0, 3, MODEL_DOF_VIRTUAL) = rd_.link_[Upper_Body].Jac_COM_r;
-                rd_.J_task.block(9, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Foot].Jac;
-                rd_.J_task.block(15, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Right_Hand].Jac;
-                rd_.J_task.block(21, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Hand].Jac;
+              for (int i = 0; i < 3; ++i)
+              {
+                if (controltype == 1)
+                {
+                  Kp_com(i) = 50.0; //60.0;
+                  Kd_com(i) = 5.0;  //5.0;
+                  Kp_com_rot(i) = 550.0;
+                  Kd_com_rot(i) = 5.0;
+                  Kp_ub(i) = 100.0;
+                  Kd_ub(i) = 10.0;
+                  Kp_hand(i) = 10.0;
+                  Kd_hand(i) = 1.0;
+                  Kp_hand_rot(i) = 10.0;
+                  Kd_hand_rot(i) = 1.0;
+                  Kp_foot(i) = 50.0;
+                  Kd_foot(i) = 5.0;
+                  Kp_foot_rot(i) = 50.0;
+                  Kd_foot_rot(i) = 5.0;
+                }
+                else if (controltype == 2)
+                {
+                  Kp_com(i) = 100.0;
+                  Kd_com(i) = 5.0; //40 60 100
+                  Kp_com_rot(i) = 50.0;
+                  Kd_com_rot(i) = 1.0;
+                  Kp_ub(i) = 50.0;
+                  Kd_ub(i) = 1.0;
+                  Kp_hand(i) = 10.0;
+                  Kd_hand(i) = 1.0;
+                  Kp_hand_rot(i) = 10.0;
+                  Kd_hand_rot(i) = 1.0;
+                  Kp_foot(i) = 50.0;
+                  Kd_foot(i) = 5.0;
+                  Kp_foot_rot(i) = 50.0;
+                  Kd_foot_rot(i) = 5.0;
+                }
+              }
 
-                rd_.link_[Pelvis].Set_initpos();
-                rd_.link_[Left_Foot].Set_initpos();
-                rd_.link_[Right_Hand].Set_initpos();
-                rd_.link_[Left_Hand].Set_initpos();
+              rd_.J_task.setZero(task_number, MODEL_DOF_VIRTUAL);
+              rd_.f_star.setZero(task_number);
+              rd_.J_task.block(0, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[COM_id].Jac;
+              rd_.J_task.block(6, 0, 3, MODEL_DOF_VIRTUAL) = rd_.link_[Upper_Body].Jac_COM_r;
+              rd_.J_task.block(9, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Foot].Jac;
+              rd_.J_task.block(15, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Right_Hand].Jac;
+              rd_.J_task.block(21, 0, 6, MODEL_DOF_VIRTUAL) = rd_.link_[Left_Hand].Jac;
 
-                rd_.link_[Pelvis].x_desired = rd_.link_[Pelvis].xpos;
-				rd_.link_[Pelvis].x_desired(0) = rd_.link_[Pelvis].xpos(0)  + tc.l_x;//- 0.2;
-				rd_.link_[Pelvis].x_desired(1) = rd_.link_[Pelvis].xpos(1)  + tc.l_y;//- 0.2;
-                rd_.link_[Pelvis].x_desired(2) = rd_.link_[Pelvis].xpos(2)  + tc.l_z;//- 0.2;
-                //rd_.link_[Pelvis].rot_desired = Matrix3d::Identity();
-				rd_.link_[Pelvis].rot_desired = DyrosMath::rotateWithX(tc.roll * 3.1415 / 180.0);
+              COM_init = rd_.link_[Pelvis].xpos - rd_.link_[Right_Foot].xpos; //rd_.link_[Pelvis].xpos;//
 
-                rd_.link_[Left_Foot].x_desired = rd_.link_[Left_Foot].xpos;
-                //rd_.link_[Left_Foot].x_desired(2) = rd_.link_[Left_Foot].xpos(2);
-                rd_.link_[Left_Foot].rot_desired = Matrix3d::Identity();
+              //rd_.link_[Pelvis].x_desired = rd_.link_[Pelvis].xpos - rd_.link_[Right_Foot].xpos;
+              rd_.link_[Pelvis].x_desired(0) = COM_init(0) + tc.l_x;
+              rd_.link_[Pelvis].x_desired(1) = COM_init(1) + tc.l_y;
+              rd_.link_[Pelvis].x_desired(2) = COM_init(2) + tc.l_z;
+              //rd_.link_[Pelvis].rot_desired = Matrix3d::Identity();
+              rd_.link_[Pelvis].rot_desired = DyrosMath::rotateWithX(tc.roll * 3.1415 / 180.0);
 
-                RH_x_init_local = rd_.link_[Upper_Body].Rotm.transpose() * (rd_.link_[Right_Hand].xpos - rd_.link_[Upper_Body].xpos);
-                LH_x_init_local = rd_.link_[Upper_Body].Rotm.transpose() * (rd_.link_[Left_Hand].xpos - rd_.link_[Upper_Body].xpos);
-                RH_R_init_local = rd_.link_[Upper_Body].Rotm.transpose() * rd_.link_[Right_Hand].Rotm;
-                LH_R_init_local = rd_.link_[Upper_Body].Rotm.transpose() * rd_.link_[Left_Hand].Rotm;
+              rd_.link_[Left_Foot].x_desired = rd_.link_[Left_Foot].xpos - rd_.link_[Right_Foot].xpos;
+              //rd_.link_[Left_Foot].x_desired(2) = rd_.link_[Left_Foot].xpos(2);
+              rd_.link_[Left_Foot].rot_desired = Matrix3d::Identity();
 
-                RH_R_target_local = Matrix3d::Identity();
-                LH_R_target_local = Matrix3d::Identity();
+              RH_x_init_local = rd_.link_[Right_Hand].xpos - rd_.link_[Upper_Body].xpos; //rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Right_Hand].xpos - rd_.link_[Upper_Body].xpos);
+              LH_x_init_local = rd_.link_[Left_Hand].xpos - rd_.link_[Upper_Body].xpos;  //rd_.link_[Upper_Body].rot_init.transpose() * (rd_.link_[Left_Hand].xpos - rd_.link_[Upper_Body].xpos);
+              RH_R_init_local = rd_.link_[Upper_Body].rot_init.transpose() * rd_.link_[Right_Hand].rot_init;
+              LH_R_init_local = rd_.link_[Upper_Body].rot_init.transpose() * rd_.link_[Left_Hand].rot_init;
 
-                task_state_init = false;
+              RH_R_target_local = Matrix3d::Identity();
+              LH_R_target_local = Matrix3d::Identity();
+
+              task_state_init = false;
             }
             gravity_torque = wbc_.gravity_compensation_torque(rd_, false, false);
 
-            rd_.link_[Pelvis].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time, tc.command_time + task_time1);
+            //rd_.link_[Pelvis].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time, tc.command_time + task_time1);
             rd_.link_[Pelvis].Set_Trajectory_rotation(rd_.control_time_, tc.command_time, tc.command_time + task_time1, false);
 
-            rd_.link_[Left_Foot].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time, tc.command_time + task_time1);
+            //rd_.link_[Left_Foot].Set_Trajectory_from_quintic(rd_.control_time_, tc.command_time, tc.command_time + task_time1);
             rd_.link_[Left_Foot].Set_Trajectory_rotation(rd_.control_time_, tc.command_time, tc.command_time + task_time1, false);
 
             for (int i = 0; i < 3; ++i)
             {
-                rd_.link_[Right_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(0);
-                rd_.link_[Right_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(1);
+              rd_.link_[Pelvis].x_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, COM_init(i), 0.0, 0.0, rd_.link_[Pelvis].x_desired(i), 0.0, 0.0)(0);
+                rd_.link_[Pelvis].v_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, COM_init(i), 0.0, 0.0, rd_.link_[Pelvis].x_desired(i), 0.0, 0.0)(1);
 
-                rd_.link_[Left_Hand].x_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(0);
-                rd_.link_[Left_Hand].v_traj_local(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(1);
+                rd_.link_[Right_Hand].x_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(0);
+                rd_.link_[Right_Hand].v_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, RH_x_init_local(i), 0.0, 0.0, RH_x_init_local(i), 0.0, 0.0)(1);
+
+                rd_.link_[Left_Hand].x_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(0);
+                rd_.link_[Left_Hand].v_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, LH_x_init_local(i), 0.0, 0.0, LH_x_init_local(i), 0.0, 0.0)(1);
+
+                rd_.link_[Left_Foot].x_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, rd_.link_[Left_Foot].x_desired(i), 0.0, 0.0, rd_.link_[Left_Foot].x_desired(i), 0.0, 0.0)(0);
+                rd_.link_[Left_Foot].v_traj(i) = DyrosMath::QuinticSpline(rd_.control_time_, tc.command_time, tc.command_time + task_time1, rd_.link_[Left_Foot].x_desired(i), 0.0, 0.0, rd_.link_[Left_Foot].x_desired(i), 0.0, 0.0)(1);
             }
 
             rd_.link_[Right_Hand].x_traj = rd_.link_[Upper_Body].xpos + rd_.link_[Upper_Body].Rotm * rd_.link_[Right_Hand].x_traj_local;
@@ -662,67 +712,41 @@ void CustomController::computeSlow()
             rd_.link_[Left_Hand].r_traj = rd_.link_[Upper_Body].rot_init * LH_R_init_local * rd_.link_[Left_Hand].r_traj_local;
             rd_.link_[Left_Hand].w_traj = rd_.link_[Upper_Body].rot_init * rd_.link_[Left_Hand].w_traj_local;
 
-            rd_.f_star.segment(0, 6) = wbc_.getfstar6d(rd_, Pelvis, 0.5*Kp_com, 0.5*Kd_com, 0.5*Kp_com_rot, 0.5*Kd_com_rot);
-            rd_.f_star.segment(6, 3) = wbc_.getfstar_rot(rd_, Upper_Body, 0.5*Kp_ub, 0.5*Kd_ub);
-            rd_.f_star.segment(9, 6) = wbc_.getfstar6d(rd_, Left_Foot, 0.5*Kp_hand, 0.5*Kd_hand, 0.5*Kp_hand_rot, 0.5*Kd_hand_rot);
-            rd_.f_star.segment(15, 6) = wbc_.getfstar6d(rd_, Right_Hand, 0.5*Kp_hand, 0.5*Kd_hand, 0.5*Kp_hand_rot, 0.5*Kd_hand_rot);
-            rd_.f_star.segment(21, 6) = wbc_.getfstar6d(rd_, Left_Hand, 0.5*Kp_hand, 0.5*Kd_hand, 0.5*Kp_hand_rot, 0.5*Kd_hand_rot);
+            rd_.f_star(0) = Kp_com(0) * (rd_.link_[Pelvis].x_traj(0) - (rd_.link_[Pelvis].xpos(0) - rd_.link_[Right_Foot].xpos(0))) + Kd_com(0) * (rd_.link_[Pelvis].v_traj(0) - rd_.link_[Pelvis].v(0));
+            rd_.f_star(1) = Kp_com(1) * (rd_.link_[Pelvis].x_traj(1) - (rd_.link_[Pelvis].xpos(1) - rd_.link_[Right_Foot].xpos(1))) + Kd_com(1) * (rd_.link_[Pelvis].v_traj(1) - rd_.link_[Pelvis].v(1));
+            rd_.f_star(2) = Kp_com(2) * (rd_.link_[Pelvis].x_traj(2) - (rd_.link_[Pelvis].xpos(2) - rd_.link_[Right_Foot].xpos(2))) + Kd_com(2) * (rd_.link_[Pelvis].v_traj(2) - rd_.link_[Pelvis].v(2));
+            rd_.f_star.segment(3, 3) = wbc_.getfstar_rot(rd_, Pelvis, Kp_com_rot, Kd_com_rot);        
+            rd_.f_star.segment(6, 3) = wbc_.getfstar_rot(rd_, Upper_Body, Kp_ub, Kd_ub);
+            rd_.f_star(9) = Kp_foot(0) * (rd_.link_[Left_Foot].x_traj(0) - (rd_.link_[Left_Foot].xpos(0) - rd_.link_[Right_Foot].xpos(0))) + Kd_foot(0) * (rd_.link_[Left_Foot].v_traj(0) - rd_.link_[Right_Foot].v(0));
+            rd_.f_star(10) = Kp_foot(1) * (rd_.link_[Left_Foot].x_traj(1) - (rd_.link_[Left_Foot].xpos(1) - rd_.link_[Right_Foot].xpos(1))) + Kd_foot(1) * (rd_.link_[Left_Foot].v_traj(1) - rd_.link_[Right_Foot].v(1));
+            rd_.f_star(11) = Kp_foot(2) * (rd_.link_[Left_Foot].x_traj(2) - (rd_.link_[Left_Foot].xpos(2) - rd_.link_[Right_Foot].xpos(2))) + Kd_foot(2) * (rd_.link_[Left_Foot].v_traj(2) - rd_.link_[Right_Foot].v(2));
+            rd_.f_star.segment(12, 3) = wbc_.getfstar_rot(rd_, Left_Foot, Kp_foot_rot, Kd_foot_rot); 
+            rd_.f_star.segment(15, 6) = wbc_.getfstar6d(rd_, Right_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
+            rd_.f_star.segment(21, 6) = wbc_.getfstar6d(rd_, Left_Hand, Kp_hand, Kd_hand, Kp_hand_rot, Kd_hand_rot);
 
             //task_torque = wbc_.task_control_torque_motor(rd_, rd_.J_task, rd_.f_star);
             if (controltype == 1)
             {
                 task_torque = wbc_.task_control_torque_with_gravity(rd_, rd_.J_task, rd_.f_star, false);
-                //Contact_torque = wbc_.contact_force_redistribution_torque_walking(rd_, task_torque, contact_force_re, eta_data, fc_ratio, 0);
-                
                 total_torque = gravity_torque + task_torque;// + Contact_torque;
                 ControlVal_ = gravity_torque + task_torque;// + Contact_torque;
             }
             else if (controltype == 2)
             {
                 task_torque = wbc_.task_control_torque_motor(rd_, rd_.J_task, rd_.f_star);
-                //Contact_torque = wbc_.contact_force_redistribution_torque_walking(rd_, task_torque + gravity_torque, contact_force_re, eta_data, fc_ratio, 0);
-                total_torque = gravity_torque + task_torque;// + Contact_torque;
-                ControlVal_ = gravity_torque + task_torque;// + Contact_torque;
+                rd_.f_star(0) = 9.5*Kp_com(0) * (rd_.link_[Pelvis].x_traj(0) - (rd_.link_[Pelvis].xpos(0) - rd_.link_[Right_Foot].xpos(0))) + Kd_com(0) * (rd_.link_[Pelvis].v_traj(0) - rd_.link_[Pelvis].v(0));
+                rd_.f_star(1) = 9.5*Kp_com(1) * (rd_.link_[Pelvis].x_traj(1) - (rd_.link_[Pelvis].xpos(1) - rd_.link_[Right_Foot].xpos(1))) + Kd_com(1) * (rd_.link_[Pelvis].v_traj(1) - rd_.link_[Pelvis].v(1));
+                rd_.f_star(2) = 9.5*Kp_com(2) * (rd_.link_[Pelvis].x_traj(2) - (rd_.link_[Pelvis].xpos(2) - rd_.link_[Right_Foot].xpos(2))) + Kd_com(2) * (rd_.link_[Pelvis].v_traj(2) - rd_.link_[Pelvis].v(2));
+                extra_torque = wbc_.task_control_torque_extra(rd_, rd_.J_task, rd_.f_star);
+                total_torque = gravity_torque + task_torque + extra_torque;// + Contact_torque;
+                ControlVal_ = gravity_torque + task_torque + extra_torque;// + Contact_torque;
             }
-/*
-            // JkT = rd_.W_inv * rd_.Q_motor_T_ * rd_.Q_motor_temp_inv;
-            // JkT_sub = JkT.block(0, 0, MODEL_DOF, 3);
-            // JkT_sub_pinv = (JkT_sub.transpose()*JkT_sub).inverse()*JkT_sub.transpose();
-            // N_matrix = I33 - JkT_sub*JkT_sub_pinv;
-
-            // extra_torque(5) = (task_torque(5) + gravity_torque(5));
-            // extra_torque(11) = (task_torque(11) + gravity_torque(11));
-            // double th = 65.0;
-            // if(extra_torque(5) < -th){
-            //     extra_torque(5) = -(extra_torque(5) + th);
-            // }
-            // else if(extra_torque(5) > th){
-            //     extra_torque(5) = -(extra_torque(5) - th);
-            // }
-            // else
-            // {
-            //     extra_torque(5) = 0.0;
-            // }
-
-            // if(extra_torque(11) < -th){
-            //     extra_torque(11) = -(extra_torque(11) + th);
-            // }
-            // else if(extra_torque(11) > th){
-            //     extra_torque(11) = -(extra_torque(11) - th);
-            // }
-            // else
-            // {
-            //     extra_torque(11) = 0.0;
-            // }
-
-            // Null_torque = N_matrix*extra_torque;
-
-            //total_torque = gravity_torque + task_torque; // + Null_torque;
-            //ControlVal_ = gravity_torque + task_torque;  // + Null_torque;*/
         }
         file[3] << rd_.control_time_
                 << "\t" << rd_.link_[Pelvis].x_traj(0) << "\t" << rd_.link_[Pelvis].x_traj(1) << "\t" << rd_.link_[Pelvis].x_traj(2)
-                << "\t" << rd_.link_[Pelvis].xpos(0) << "\t" << rd_.link_[Pelvis].xpos(1) << "\t" << rd_.link_[Pelvis].xpos(2)
+                << "\t" << rd_.link_[Pelvis].xpos(0) - rd_.link_[Right_Foot].xpos(0)<< "\t" << rd_.link_[Pelvis].xpos(1) - rd_.link_[Right_Foot].xpos(1)<< "\t" << rd_.link_[Pelvis].xpos(2)- rd_.link_[Right_Foot].xpos(2)
+                << "\t" << rd_.link_[Left_Foot].x_traj(0) << "\t" << rd_.link_[Left_Foot].x_traj(1) << "\t" << rd_.link_[Left_Foot].x_traj(2)
+                << "\t" << rd_.link_[Left_Foot].xpos(0) - rd_.link_[Right_Foot].xpos(0) << "\t" << rd_.link_[Left_Foot].xpos(1) - rd_.link_[Right_Foot].xpos(1) << "\t" << rd_.link_[Left_Foot].xpos(2) - rd_.link_[Right_Foot].xpos(2)
                 << endl;
     }
     else if (tc.mode == 13)
