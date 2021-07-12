@@ -814,6 +814,10 @@ void CustomController::computeSlow()
 
                 lfoot_vel_float_ = DyrosMath::inverseIsometry3d(pelv_vel_support_)*lfoot_vel_support_;
                 rfoot_vel_float_ = DyrosMath::inverseIsometry3d(pelv_vel_support_)*rfoot_vel_support_;
+		    
+		if(rd_.control_time_ < tc.command_time+0.0005){
+                    q_d = q_init.segment(0, 12);
+                }
                 
                 q_desired.segment(0, 12) = q_d;
                 q_desired.segment(12, MODEL_DOF - 12) = q_init.segment(12, MODEL_DOF - 12);
@@ -1184,7 +1188,9 @@ void CustomController::computeSlow()
                 LH_R_init_local = rd_.link_[Upper_Body].Rotm.transpose() * rd_.link_[Left_Hand].Rotm;
 
                 RH_R_target_local = Matrix3d::Identity();
-                LH_R_target_local = Matrix3d::Identity();
+                LH_R_target_local = Matrix3d::Identity()if(rd_.control_time_ < tc.command_time+0.0005){
+                    q_d = q_init.segment(0, 12);
+                };
 
                 task_state_init = false;
             }
