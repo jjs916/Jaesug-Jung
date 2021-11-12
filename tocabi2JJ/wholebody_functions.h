@@ -612,23 +612,22 @@ namespace WBC
 
     VectorQd TaskControlTorqueExtra(RobotData &rd_, VectorXd f_star, Eigen::MatrixVVd B, Eigen::MatrixVVd B_inv)
     {
-        int task_dof = 1;//rd_.J_task.rows();
-        //rd_.J_task = J_task;
+        //int task_dof = 1;
+        int task_dof = rd_.J_task.rows();
         rd_.J_task_T = rd_.J_task.transpose();
 
-        Eigen::MatrixXd Jtask_z, Jtask_z_T;
-        Jtask_z.resize(1,rd_.J_task.cols());
-        Jtask_z_T.resize(rd_.J_task.cols(),1);
-        Jtask_z = rd_.J_task.block(2,0,1,rd_.J_task.cols());
-        Jtask_z_T = Jtask_z.transpose();
-        //Eigen::MatrixVVd B;
-        //Eigen::MatrixVVd B_inv;
+        // Eigen::MatrixXd Jtask_z, Jtask_z_T;
+        // Jtask_z.resize(1,rd_.J_task.cols());
+        // Jtask_z_T.resize(rd_.J_task.cols(),1);
+        // Jtask_z = rd_.J_task.block(2,0,1,rd_.J_task.cols());
+        // Jtask_z_T = Jtask_z.transpose();
+        
+        //Task Control Torque;
         Eigen::MatrixXd lambda_m;
         Eigen::MatrixXd lambda_m_inv;
         Eigen::MatrixXd J_task_inv_m_T;
         Eigen::MatrixXd Q_e, Q_e_T, Q_e_temp, Q_e_temp_inv;
 
-        //B.resize(MODEL_DOF_VIRTUAL, MODEL_DOF_VIRTUAL);
         lambda_m.resize(task_dof, task_dof);
         lambda_m_inv.resize(task_dof, task_dof);
         J_task_inv_m_T.resize(task_dof, MODEL_DOF_VIRTUAL);
@@ -637,36 +636,48 @@ namespace WBC
         Eigen::MatrixXd SiT;
         Eigen::MatrixXd SikT;
 
-        Si.setZero(8, MODEL_DOF + 6);
-        SiT.setZero(MODEL_DOF + 6, 8);
-        SikT.setZero(MODEL_DOF, 8);
-        Si(0, 6) = 1.0;
-        Si(1, 7) = 1.0;
-        Si(2, 8) = 1.0;
-        Si(3, 9) = 1.0;//무릎관절
-
-        Si(4, 12) = 1.0;
-        Si(5, 13) = 1.0;
-        Si(6, 14) = 1.0;
-        Si(7, 15) = 1.0;//무릎관절
+        //knee
+        Si.setZero(2, MODEL_DOF + 6);
+        SiT.setZero(MODEL_DOF + 6, 2);
+        SikT.setZero(MODEL_DOF, 2);
+        Si(0, 9) = 1.0;
+        Si(1, 15) = 1.0;
         SiT = Si.transpose();
-        SikT(0, 0) = 1.0;
-        SikT(1, 1) = 1.0;
-        SikT(2, 2) = 1.0;
-        SikT(3, 3) = 1.0;
-        SikT(6, 4) = 1.0;
-        SikT(7, 5) = 1.0;
-        SikT(8, 6) = 1.0;
-        SikT(9, 7) = 1.0;
+        SikT(3, 0) = 1.0;
+        SikT(9, 1) = 1.0;
+
+        // knee & hip
+        // Si.setZero(8, MODEL_DOF + 6);
+        // SiT.setZero(MODEL_DOF + 6, 8);
+        // SikT.setZero(MODEL_DOF, 8);
+        // Si(0, 6) = 1.0;
+        // Si(1, 7) = 1.0;
+        // Si(2, 8) = 1.0;
+        // Si(3, 9) = 1.0;//무릎관절
+
+        // Si(4, 12) = 1.0;
+        // Si(5, 13) = 1.0;
+        // Si(6, 14) = 1.0;
+        // Si(7, 15) = 1.0;//무릎관절
+        // SiT = Si.transpose();
+        // SikT(0, 0) = 1.0;
+        // SikT(1, 1) = 1.0;
+        // SikT(2, 2) = 1.0;
+        // SikT(3, 3) = 1.0;
+        // SikT(6, 4) = 1.0;
+        // SikT(7, 5) = 1.0;
+        // SikT(8, 6) = 1.0;
+        // SikT(9, 7) = 1.0;
 
         B_inv = B.llt().solve(MatrixXd::Identity(MODEL_DOF_VIRTUAL, MODEL_DOF_VIRTUAL));
 
-        //lambda_m_inv = rd_.J_task * B_inv * rd_.N_C * rd_.J_task_T;
-        lambda_m_inv = Jtask_z * B_inv * rd_.N_C * Jtask_z_T;
+        lambda_m_inv = rd_.J_task * B_inv * rd_.N_C * rd_.J_task_T;
+        //lambda_m_inv = Jtask_z * B_inv * rd_.N_C * Jtask_z_T;
 
         lambda_m = lambda_m_inv.llt().solve(MatrixXd::Identity(task_dof, task_dof));
 
-        J_task_inv_m_T = lambda_m * Jtask_z * B_inv * rd_.N_C;
+        J_task_inv_m_T = lambda_m * rd_.J_task * B_inv * rd_.N_C;
+        //J_task_inv_m_T = lambda_m * Jtask_z * B_inv * rd_.N_C;
 
         Eigen::MatrixXd Wi;
         Eigen::MatrixXd Wi_inv;
@@ -683,7 +694,7 @@ namespace WBC
 
         Q_e_temp_inv = DyrosMath::pinv_QR(Q_e_temp);
         //DyrosMath::dc_inv_QR(rd_.J_task)
-        return SikT * Wi_inv * (Q_e_T * (Q_e_temp_inv * (lambda_m * f_star(2))));
+        return SikT * Wi_inv * (Q_e_T * (Q_e_temp_inv * (lambda_m * f_star)));
     }
 
     VectorXd Forcecompute(RobotData &rd_, VectorXd torque, Eigen::MatrixVVd B, Eigen::MatrixVVd B_inv)
